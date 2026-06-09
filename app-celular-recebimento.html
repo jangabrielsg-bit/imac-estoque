@@ -319,6 +319,24 @@ input.filled{border-color:var(--green);background:#f0fdf8}
     </div>
   </div>
 
+  <div class="card">
+    <div class="card-title">Etiquetas a imprimir</div>
+    <div class="tip" style="margin-bottom:12px">
+      <strong>1 etiqueta-mestra</strong> → cola numa caixa representativa do lote (padrão).<br>
+      <strong>Várias</strong> → 1 por caixa, para identificar cada volume individualmente.
+    </div>
+    <div class="field">
+      <label>Quantidade de etiquetas</label>
+      <input type="number" id="qtd-etiquetas" value="1" min="1" max="500" inputmode="numeric">
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+      <button onclick="setQtdEtq(1)"  style="flex:1;border:1.5px solid var(--border);border-radius:8px;padding:8px;font-size:13px;font-weight:600;background:#fff;cursor:pointer;font-family:inherit">1 etiqueta</button>
+      <button onclick="setQtdEtq(5)"  style="flex:1;border:1.5px solid var(--border);border-radius:8px;padding:8px;font-size:13px;font-weight:600;background:#fff;cursor:pointer;font-family:inherit">5</button>
+      <button onclick="setQtdEtq(10)" style="flex:1;border:1.5px solid var(--border);border-radius:8px;padding:8px;font-size:13px;font-weight:600;background:#fff;cursor:pointer;font-family:inherit">10</button>
+      <button onclick="setQtdEtq(30)" style="flex:1;border:1.5px solid var(--border);border-radius:8px;padding:8px;font-size:13px;font-weight:600;background:#fff;cursor:pointer;font-family:inherit">30</button>
+    </div>
+  </div>
+
   <button class="btn btn-green" onclick="gerarEtiqueta()">✓ Gerar etiqueta</button>
   <button class="btn btn-outline" style="margin-top:10px" onclick="showTab('scan')">← Voltar</button>
 </div>
@@ -663,6 +681,15 @@ async function imprimirViaPC() {
 // ─── Impressão direta (abre janela no celular → salva/compartilha) ──
 function imprimirDireto() {
   if (!dadosAtuais) return;
+  const qtd = parseInt(document.getElementById('qtd-etiquetas')?.value || '1') || 1;
+  for (let i = 0; i < qtd; i++) {
+    setTimeout(() => _imprimirUma(), i * 700);
+  }
+  if (qtd > 1) toast(`Abrindo ${qtd} etiquetas...`, 'success');
+}
+
+function _imprimirUma() {
+  if (!dadosAtuais) return;
   setTimeout(() => {
     const qrEl  = document.getElementById('qrcode');
     const canvas= qrEl.querySelector('canvas');
@@ -764,6 +791,10 @@ function renderHistorico() {
       </div>
     </div>
   `).join('');
+}
+
+function setQtdEtq(n) {
+  document.getElementById('qtd-etiquetas').value = n;
 }
 
 function reimprimirIdx(i) {
