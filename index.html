@@ -6,45 +6,52 @@
 <title>IMAC — Estoque</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f5;color:#1a1a2e;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f5;color:#1a1a2e;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
 .wrap{max-width:480px;width:100%}
-.header{text-align:center;margin-bottom:32px}
-.logo{font-size:28px;font-weight:700;letter-spacing:.03em}
-.logo span{color:#4fc3f7}
-.sub{font-size:14px;color:#6b7a99;margin-top:6px}
-.card{background:#fff;border-radius:14px;padding:24px;margin-bottom:14px;border:1px solid #dde3ee;text-decoration:none;display:block;transition:all .15s}
+.header{text-align:center;margin-bottom:28px}
+.logo{font-size:26px;font-weight:700}.logo span{color:#4fc3f7}
+.sub{font-size:13px;color:#6b7a99;margin-top:5px}
+.card{background:#fff;border-radius:14px;padding:20px;margin-bottom:12px;border:1px solid #dde3ee;text-decoration:none;display:block;transition:all .15s}
 .card:hover{border-color:#4fc3f7;transform:translateY(-2px);box-shadow:0 4px 16px rgba(79,195,247,.12)}
-.card-icon{font-size:28px;margin-bottom:10px}
-.card-title{font-size:17px;font-weight:700;color:#1a1a2e;margin-bottom:4px}
-.card-desc{font-size:13px;color:#6b7a99;line-height:1.5}
-.tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-top:8px;text-transform:uppercase;letter-spacing:.05em}
-.tag-celular{background:#e8f7fe;color:#0277bd}
-.tag-pc{background:#f0fdf8;color:#1a4a3a}
-.footer{text-align:center;font-size:12px;color:#90a0b0;margin-top:20px}
+.card-icon{font-size:26px;margin-bottom:8px}
+.card-title{font-size:16px;font-weight:700;color:#1a1a2e;margin-bottom:3px}
+.card-desc{font-size:12px;color:#6b7a99;line-height:1.5}
+.tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-top:7px;text-transform:uppercase;letter-spacing:.05em}
+.t-cel{background:#e8f7fe;color:#0277bd}
+.t-pc{background:#f0fdf8;color:#1a4a3a}
+.t-new{background:#fef3c7;color:#92400e}
+.footer{text-align:center;font-size:11px;color:#90a0b0;margin-top:16px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="header">
     <div class="logo">IMAC <span>·</span> Estoque</div>
-    <div class="sub">Sistema de Rastreabilidade — Recebimento de Mercadorias</div>
+    <div class="sub">Sistema de Rastreabilidade</div>
   </div>
+
+  <a class="card" href="pesagem-teste.html">
+    <div class="card-icon">⚖️</div>
+    <div class="card-title">App de Pesagem</div>
+    <div class="card-desc">Pesagem guiada com limite de insumo, validação de tolerância e impressão automática de etiqueta com QR code.</div>
+    <span class="tag t-new">★ Novo — testar amanhã</span>
+  </a>
 
   <a class="card" href="app-celular-recebimento.html">
     <div class="card-icon">📱</div>
-    <div class="card-title">App do Celular</div>
+    <div class="card-title">App de Recebimento</div>
     <div class="card-desc">Bipe mercadorias com a câmera, preencha os dados e envie a impressão para a Zebra GC420d.</div>
-    <span class="tag tag-celular">Abrir no celular</span>
+    <span class="tag t-cel">Celular</span>
   </a>
 
   <a class="card" href="servidor-impressao-pc.html">
     <div class="card-icon">🖨️</div>
     <div class="card-title">Servidor de Impressão</div>
-    <div class="card-desc">Deixe aberto no PC do estoque. Recebe as etiquetas do celular e imprime automaticamente na Zebra.</div>
-    <span class="tag tag-pc">Abrir no PC</span>
+    <div class="card-desc">Deixe aberto no PC do estoque. Recebe as etiquetas e imprime na Zebra.</div>
+    <span class="tag t-pc">PC</span>
   </a>
 
-  <div class="footer">IMAC · Rastreabilidade · github.com/jangabrielsg-bit/imac-estoque</div>
+  <div class="footer">IMAC · github.com/jangabrielsg-bit/imac-estoque</div>
 </div>
 </body>
 </html>
