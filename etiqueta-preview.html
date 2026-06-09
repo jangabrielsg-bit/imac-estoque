@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMAC — Etiqueta Industrial</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Segoe UI',Arial,sans-serif;
+  background:#d0d3d8;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:32px 16px 48px;
+  color:#1a1a2e;
+}
+
+/* ── UI shell ── */
+h1{font-size:15px;font-weight:600;color:#1a1a2e;margin-bottom:3px}
+.sub{font-size:12px;color:#6b7a99;margin-bottom:22px;text-align:center}
+
+.switcher{display:flex;background:#fff;border-radius:10px;padding:4px;gap:4px;margin-bottom:28px;border:1px solid #dde3ee}
+.sw-btn{padding:8px 20px;border-radius:7px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#6b7a99;background:transparent;transition:all .15s}
+.sw-btn.active{background:#1a1a2e;color:#fff}
+
+/* ── Papel / ambiente ── */
+.desk{
+  background:#c8cace;
+  border-radius:8px;
+  padding:36px 40px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+  box-shadow:inset 0 2px 8px rgba(0,0,0,.15);
+  margin-bottom:24px;
+}
+.desk-label{font-size:10px;color:#888;letter-spacing:.07em;text-transform:uppercase;margin-bottom:4px;align-self:flex-start}
+
+/* ══════════════════════════════════════════════
+   ETIQUETA INDUSTRIAL — 72mm × 72mm
+   Layout inspirado em GS1 / Zebra / SAP WM
+   ══════════════════════════════════════════════ */
+
+.label{
+  width:272px;   /* 72mm @ 96dpi ≈ 272px */
+  height:272px;
+  background:#fff;
+  border:1px solid #111;
+  font-family:Arial,Helvetica,sans-serif;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  box-shadow:2px 3px 10px rgba(0,0,0,.25);
+}
+
+/* FAIXA TOPO — empresa + tipo */
+.l-topbar{
+  background:#1a1a2e;
+  color:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:3px 7px;
+  flex-shrink:0;
+}
+.l-empresa{font-size:7.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.l-tipo-badge{
+  font-size:6px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;background:rgba(255,255,255,.15);
+  padding:1.5px 5px;border-radius:2px;
+}
+
+/* ZONA PRODUTO — destaque máximo */
+.l-produto-zona{
+  border-bottom:1px solid #111;
+  padding:5px 7px 4px;
+  flex-shrink:0;
+}
+.l-produto-nome{
+  font-size:13px;font-weight:700;
+  color:#1a1a2e;line-height:1.2;
+  text-transform:uppercase;letter-spacing:.02em;
+}
+.l-produto-desc{font-size:6.5px;color:#555;margin-top:1px;letter-spacing:.03em}
+
+/* ZONA LOTE — faixa de destaque */
+.l-lote-faixa{
+  background:#f0f0f0;
+  border-bottom:1px solid #ccc;
+  padding:3px 7px;
+  display:flex;align-items:center;gap:8px;
+  flex-shrink:0;
+}
+.l-lote-label{font-size:6px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.06em;min-width:28px}
+.l-lote-val{font-size:10.5px;font-weight:700;font-family:'Courier New',monospace;color:#1a1a2e;letter-spacing:.05em;flex:1}
+.l-lote-forn-wrap{display:flex;flex-direction:column;align-items:flex-end}
+.l-lote-forn-lbl{font-size:5.5px;color:#888;text-transform:uppercase;letter-spacing:.04em}
+.l-lote-forn-val{font-size:7px;font-weight:600;font-family:'Courier New',monospace;color:#555}
+
+/* ZONA DADOS — grid de campos */
+.l-dados{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  border-bottom:1px solid #ddd;
+  flex-shrink:0;
+}
+.l-campo{
+  padding:3px 7px;
+  border-right:1px solid #e8e8e8;
+  border-bottom:1px solid #e8e8e8;
+}
+.l-campo:nth-child(2n){border-right:none}
+.l-campo:nth-last-child(-n+2){border-bottom:none}
+.l-campo-lbl{font-size:5.5px;text-transform:uppercase;letter-spacing:.06em;color:#888;font-weight:700}
+.l-campo-val{font-size:8.5px;font-weight:700;color:#1a1a2e;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.l-campo-val.val-green{color:#065f46}
+.l-campo-val.val-red{color:#991b1b}
+.l-campo-val.val-amber{color:#92400e}
+.l-campo-val.big{font-size:11px}
+
+/* ZONA QR + BARCODE */
+.l-scan-zona{
+  display:flex;
+  flex:1;
+  min-height:0;
+  border-bottom:1px solid #ddd;
+}
+.l-qr-bloco{
+  border-right:1px solid #ddd;
+  padding:4px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  flex-shrink:0;
+  width:72px;
+}
+.l-qr-bloco canvas,.l-qr-bloco img{width:60px!important;height:60px!important}
+.l-qr-txt{font-size:5px;color:#888;text-align:center;letter-spacing:.04em;text-transform:uppercase}
+
+.l-barcode-bloco{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:4px 5px;
+  gap:2px;
+}
+/* Barcode simulado com CSS */
+.barcode-sim{
+  display:flex;
+  gap:0;
+  height:36px;
+  align-items:flex-end;
+  width:100%;
+}
+.b{display:inline-block;height:100%;background:#1a1a2e}
+.bs{display:inline-block;height:100%;background:#fff}
+.b-tall{height:100%}
+.b-short{height:75%}
+.barcode-num{font-size:5.5px;font-family:'Courier New',monospace;color:#333;letter-spacing:.08em;margin-top:1px}
+.barcode-ai{font-size:5px;color:#888;margin-top:0}
+
+/* RODAPÉ */
+.l-footer{
+  background:#f8f8f8;
+  border-top:1px solid #ddd;
+  padding:2.5px 7px;
+  display:flex;justify-content:space-between;align-items:center;
+  flex-shrink:0;
+}
+.l-footer-left{font-size:5.5px;color:#888;letter-spacing:.04em}
+.l-footer-right{font-size:5.5px;color:#888}
+.l-status-ok{
+  font-size:6px;font-weight:700;color:#065f46;
+  background:#d1fae5;padding:1.5px 5px;border-radius:2px;
+  text-transform:uppercase;letter-spacing:.04em;
+}
+.l-status-warn{
+  font-size:6px;font-weight:700;color:#92400e;
+  background:#fef3c7;padding:1.5px 5px;border-radius:2px;
+  text-transform:uppercase;letter-spacing:.04em;
+}
+
+/* ── Régua ── */
+.ruler-wrap{display:flex;flex-direction:column;align-items:center;gap:2px}
+.ruler{width:272px;height:6px;background:repeating-linear-gradient(90deg,#666 0px,#666 13.6px,#fff 13.6px,#fff 27.2px);border:1px solid #555}
+.ruler-txt{font-size:9px;color:#777;letter-spacing:.05em}
+
+/* ── Nota ── */
+.nota{background:#fff;border-radius:10px;padding:14px 18px;border:1px solid #dde3ee;max-width:380px;font-size:12px;color:#6b7a99;line-height:1.65;text-align:center}
+.nota strong{color:#1a1a2e}
+</style>
+</head>
+<body>
+
+<h1>IMAC — Etiqueta Industrial</h1>
+<div class="sub">Padrão GS1 · 72 × 72 mm · Zebra GC420d · Térmica direta</div>
+
+<div class="switcher">
+  <button class="sw-btn active" onclick="trocar('rec',this)">📦 Recebimento</button>
+  <button class="sw-btn" onclick="trocar('pes',this)">⚖️ Pesagem / Kit</button>
+</div>
+
+<div class="desk">
+  <div class="desk-label">Superfície de impressão — escala real</div>
+
+  <!-- ═══════ ETIQUETA RECEBIMENTO ═══════ -->
+  <div class="label" id="etq-rec">
+
+    <div class="l-topbar">
+      <span class="l-empresa">IMAC Indústria</span>
+      <span class="l-tipo-badge">Recebimento · Estoque</span>
+    </div>
+
+    <div class="l-produto-zona">
+      <div class="l-produto-nome">Fermento Biológico Seco</div>
+      <div class="l-produto-desc">Insumo · Categoria: Fermentos e Leveduras</div>
+    </div>
+
+    <div class="l-lote-faixa">
+      <div class="l-lote-label">Lote IMAC</div>
+      <div class="l-lote-val">LT-FERM-260609-001</div>
+      <div class="l-lote-forn-wrap">
+        <div class="l-lote-forn-lbl">Lote fornecedor</div>
+        <div class="l-lote-forn-val">FAB-240601</div>
+      </div>
+    </div>
+
+    <div class="l-dados">
+      <div class="l-campo">
+        <div class="l-campo-lbl">Validade</div>
+        <div class="l-campo-val val-green big">12/2025</div>
+      </div>
+      <div class="l-campo">
+        <div class="l-campo-lbl">Data entrada</div>
+        <div class="l-campo-val">09/06/2026</div>
+      </div>
+      <div class="l-campo">
+        <div class="l-campo-lbl">Nota Fiscal</div>
+        <div class="l-campo-val">NF 004521</div>
+      </div>
+      <div class="l-campo">
+        <div class="l-campo-lbl">Fornecedor</div>
+        <div class="l-campo-val">Lesaffre BR</div>
+      </div>
+      <div class="l-campo">
+        <div class="l-campo-lbl">Quantidade</div>
+        <div class="l-campo-val">30 cx · 750 un</div>
+      </div>
+      <div class="l-campo">
+        <div class="l-campo-lbl">Endereço</div>
+        <div class="l-campo-val">A-03-02</div>
+      </div>
+    </div>
+
+    <div class="l-scan-zona">
+      <div class="l-qr-bloco">
+        <div id="qr-rec"></div>
+        <div class="l-qr-txt">Scan / QR</div>
+      </div>
+      <div class="l-barcode-bloco">
+        <div class="barcode-ai">(01) GTIN  (10) LOTE  (17) VAL</div>
+        <div class="barcode-sim" id="bc-rec"></div>
+        <div class="barcode-num">LT-FERM-260609-001</div>
+      </div>
+    </div>
+
+    <div class="l-footer">
+      <div class="l-footer-left">Op: João Silva · IMAC Rastreabilidade</div>
+      <div class="l-footer-right">09/06/2026 08:42</div>
+    </div>
+
+  </div>
+
+  <!-- ═══════ ETIQUETA PESAGEM ═══════ -->
+  <div class="label" id="etq-pes" style="display:none">
+
+    <div class="l-topbar" style="background:#0a3d2b">
+      <span class="l-empresa">IMAC Indústria</span>
+      <span class="l-tipo-badge">Sala de Pesagem · Kit Produção</span>
+    </div>
+
+    <div class="l-produto-zona">
+      <div class="l-produto-nome">Fermento Biológico Seco</div>
+      <div class="l-produto-desc">OP-260609-003 · Produto final: Pão Francês · Kit 001 / 130</div>
+    </div>
+
+    <div class="l-lote-faixa">
+      <div class="l-lote-label">Kit IMAC</div>
+      <div class="l-lote-val">KIT-260609-001</div>
+      <div class="l-lote-forn-wrap">
+        <div class="l-lote-forn-lbl">Lote insumo</div>
+        <div class="l-lote-forn-val">LT-FERM-260609-001</div>
+      </div>
+    </div>
+
+    <div class="l-dados">
+      <div class="l-campo">
+        <div class="l-campo-lbl">Peso alvo</div>
+        <div class="l-campo-val big">260,0 g</div>
+      </div>
+      <div class="l-campo">
+        <div class="l-campo-lbl">Peso real</div>
+        <div class="l-campo-val val-green big">261,3 g</div>
+      </div>
+      <div class="l-campo">
+        <div class="l-campo-lbl">Desvio</div>
+        <div class="l-campo-val val-green">+0,50% ✓</div>
+      </div>
+      <div class="l-campo">
+        <div class="l-campo-lbl">Tolerância</div>
+        <div class="l-campo-val">± 1,0 %</div>
+      </div>
+      <div class="l-campo">
+        <div class="l-campo-lbl">Operador</div>
+        <div class="l-campo-val">João Silva</div>
+      </div>
+      <div class="l-campo">
+        <div class="l-campo-lbl">Balança</div>
+        <div class="l-campo-val">TI400-01</div>
+      </div>
+    </div>
+
+    <div class="l-scan-zona">
+      <div class="l-qr-bloco">
+        <div id="qr-pes"></div>
+        <div class="l-qr-txt">Scan / QR</div>
+      </div>
+      <div class="l-barcode-bloco">
+        <div class="barcode-ai">(10) KIT  (3103) PESO  (17) VAL</div>
+        <div class="barcode-sim" id="bc-pes"></div>
+        <div class="barcode-num">KIT-260609-001  261.3g</div>
+      </div>
+    </div>
+
+    <div class="l-footer">
+      <div class="l-footer-left">Op: João Silva · Sala A · IMAC</div>
+      <span class="l-status-ok">✓ Dentro da tolerância</span>
+    </div>
+
+  </div>
+
+  <!-- régua -->
+  <div class="ruler-wrap">
+    <div class="ruler"></div>
+    <div class="ruler-txt">← 72 mm →</div>
+  </div>
+
+</div>
+
+<div class="nota">
+  <strong>Padrão GS1-128:</strong> o código de barras horizontal carrega lote, validade e identificador do produto em um único scan — compatível com qualquer coletor industrial.<br>
+  O QR code lateral carrega os mesmos dados em formato JSON para leitura por celular.
+</div>
+
+<script>
+// ── QR codes ─────────────────────────────────────────────────
+new QRCode(document.getElementById('qr-rec'),{
+  text:JSON.stringify({loteImac:'LT-FERM-260609-001',produto:'Fermento biológico seco',
+    loteForn:'FAB-240601',nf:'004521',validade:'12/2025',
+    entrada:'09/06/2026',endereco:'A-03-02',fornecedor:'Lesaffre BR'}),
+  width:60,height:60,colorDark:'#1a1a2e',colorLight:'#fff',
+  correctLevel:QRCode.CorrectLevel.M
+});
+new QRCode(document.getElementById('qr-pes'),{
+  text:JSON.stringify({kit:'KIT-260609-001',op:'OP-260609-003',
+    insumo:'Fermento biológico seco',loteImac:'LT-FERM-260609-001',
+    pesoAlvo:260,pesoReal:261.3,desvio:'+0.50%',operador:'João Silva'}),
+  width:60,height:60,colorDark:'#0a3d2b',colorLight:'#fff',
+  correctLevel:QRCode.CorrectLevel.M
+});
+
+// ── Barcode simulado ─────────────────────────────────────────
+function gerarBarcode(el){
+  // Padrão visual GS1-128: barras de largura variável 1-4px
+  const padrao=[3,1,2,1,1,2,2,1,1,3,1,1,2,1,3,1,1,1,2,2,1,1,1,2,1,3,2,1,1,2,
+                1,1,2,1,2,2,1,1,3,1,2,1,1,1,1,3,2,1,1,2,1,1,1,3,1,2,1,2,1,1,
+                2,2,1,1,1,2,1,1,3,2,1,1,1,2,2,1,1,2,2,1,1,2,1,2,1,2,1,1,3,1];
+  let html='';
+  padrao.forEach((w,i)=>{
+    const isBar = i%2===0;
+    const h = (i%7===0||i%11===0)?'100%':'85%';
+    const px = w*2+'px';
+    if(isBar) html+=`<div class="b" style="width:${px};height:${h};flex-shrink:0"></div>`;
+    else      html+=`<div class="bs" style="width:${px};flex-shrink:0"></div>`;
+  });
+  el.innerHTML=html;
+}
+gerarBarcode(document.getElementById('bc-rec'));
+gerarBarcode(document.getElementById('bc-pes'));
+
+// ── Switch ────────────────────────────────────────────────────
+function trocar(tipo,btn){
+  document.querySelectorAll('.sw-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('etq-rec').style.display = tipo==='rec'?'flex':'none';
+  document.getElementById('etq-pes').style.display = tipo==='pes'?'flex':'none';
+}
+</script>
+</body>
+</html>
