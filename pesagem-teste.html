@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>IMAC — Pesagem</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1a1a2e;--blue:#4fc3f7;--green:#43c59e;
+  --red:#ef5350;--amber:#f59e0b;--gray:#6b7a99;
+  --border:#dde3ee;--light:#f0f2f5;
+}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--light);color:var(--navy);min-height:100vh}
+
+header{background:var(--navy);color:#fff;padding:0 16px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+.logo{font-size:16px;font-weight:700}.logo span{color:var(--blue)}
+.header-right{font-size:11px;color:#90a0b0;text-align:right}
+
+.tabs{display:flex;background:#fff;border-bottom:2px solid var(--border);position:sticky;top:52px;z-index:100}
+.tab{flex:1;padding:12px 4px;text-align:center;font-size:12px;font-weight:600;color:var(--gray);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab.active{color:var(--navy);border-bottom-color:var(--blue)}
+
+.screen{display:none;padding:14px}
+.screen.active{display:block}
+
+.card{background:#fff;border-radius:12px;padding:18px;margin-bottom:12px;border:1px solid var(--border)}
+.card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.card-title::before{content:'';display:block;width:3px;height:13px;background:var(--blue);border-radius:2px}
+
+/* INSUMO ATUAL */
+.insumo-box{background:var(--navy);border-radius:10px;padding:16px;margin-bottom:14px;color:#fff}
+.insumo-nome{font-size:20px;font-weight:700;margin-bottom:4px}
+.insumo-lote{font-size:12px;color:#90a0b0;font-family:monospace}
+.insumo-meta{display:flex;gap:12px;margin-top:10px}
+.insumo-meta-item{display:flex;flex-direction:column;gap:2px}
+.insumo-meta-label{font-size:10px;color:#90a0b0;text-transform:uppercase;letter-spacing:.05em}
+.insumo-meta-val{font-size:15px;font-weight:700;color:#fff}
+.insumo-meta-val.ok{color:var(--green)}
+.insumo-meta-val.warn{color:var(--amber)}
+
+/* GAUGE DE PESO */
+.gauge-wrap{margin:12px 0}
+.gauge-label{display:flex;justify-content:space-between;font-size:12px;color:var(--gray);margin-bottom:6px}
+.gauge-bar{height:20px;background:var(--light);border-radius:10px;overflow:hidden;border:1px solid var(--border);position:relative}
+.gauge-fill{height:100%;border-radius:10px;transition:width .3s,background .3s;position:relative}
+.gauge-fill.ok{background:linear-gradient(90deg,#43c59e,#2dd4bf)}
+.gauge-fill.warn{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
+.gauge-fill.over{background:linear-gradient(90deg,#ef5350,#f87171)}
+.gauge-limit{position:absolute;top:0;bottom:0;width:2px;background:var(--navy);opacity:.5}
+.gauge-nums{display:flex;justify-content:space-between;font-size:11px;color:var(--gray);margin-top:4px}
+
+/* INPUT PESO */
+.peso-input-wrap{position:relative;margin:14px 0}
+.peso-display{background:var(--navy);border-radius:12px;padding:20px;text-align:center;cursor:pointer;user-select:none}
+.peso-display.manual{background:#f8fdff;border:2px solid var(--blue)}
+.peso-valor{font-size:48px;font-weight:700;color:#fff;letter-spacing:-.02em;font-family:monospace}
+.peso-display.manual .peso-valor{color:var(--navy)}
+.peso-unidade{font-size:14px;color:#90a0b0;margin-top:2px}
+.peso-display.manual .peso-unidade{color:var(--gray)}
+.peso-status{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:8px}
+.ps-ok{background:#d1fae5;color:#065f46}
+.ps-warn{background:#fef3c7;color:#92400e}
+.ps-over{background:#fee2e2;color:#991b1b}
+.ps-idle{background:#f0f2f5;color:#6b7a99}
+
+/* TECLADO NUMÉRICO */
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.numpad-key{background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:16px 8px;font-size:22px;font-weight:600;text-align:center;cursor:pointer;transition:all .1s;color:var(--navy);-webkit-tap-highlight-color:transparent}
+.numpad-key:active{background:var(--navy);color:#fff;transform:scale(.95)}
+.numpad-key.del{font-size:18px;color:var(--red)}
+.numpad-key.ok-key{background:var(--green);color:#fff;border-color:var(--green);font-size:16px}
+.numpad-key.ok-key:active{background:#2d9e7a}
+.numpad-key.zero{grid-column:span 1}
+.numpad-key.ponto{font-size:28px;padding-top:10px}
+
+/* BOTÕES */
+.btn{border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit;width:100%;display:block;text-align:center}
+.btn+.btn{margin-top:8px}
+.btn-primary{background:var(--navy);color:#fff}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:disabled{background:#c8d6e0;cursor:not-allowed}
+.btn-outline{background:#fff;color:var(--gray);border:1.5px solid var(--border)}
+.btn-red{background:var(--red);color:#fff}
+
+/* VALIDAÇÃO */
+.validacao{border-radius:10px;padding:14px;margin:10px 0;text-align:center;font-weight:600;font-size:16px;display:none}
+.v-ok{background:#d1fae5;color:#065f46;border:1.5px solid #6ee7b7}
+.v-warn{background:#fef3c7;color:#92400e;border:1.5px solid #fcd34d}
+.v-over{background:#fee2e2;color:#991b1b;border:1.5px solid #fca5a5}
+
+/* HISTÓRICO */
+.hist-item{padding:12px 0;border-bottom:1px solid var(--light)}
+.hist-item:last-child{border-bottom:none}
+.hist-insumo{font-weight:600;font-size:14px}
+.hist-meta{font-size:12px;color:var(--gray);margin-top:2px}
+.hist-peso{font-size:14px;font-weight:700;margin-top:4px}
+.hist-peso.ok{color:#065f46}
+.hist-peso.over{color:#991b1b}
+
+/* CONFIG */
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+label{font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.05em}
+input,select{border:1.5px solid var(--border);border-radius:8px;padding:11px 14px;font-size:15px;color:var(--navy);background:#fff;font-family:inherit;width:100%}
+input:focus,select:focus{outline:none;border-color:var(--blue)}
+
+/* TOAST */
+#toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--navy);color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;opacity:0;transition:all .25s;z-index:999;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.success{border-bottom:3px solid var(--green)}
+#toast.error{border-bottom:3px solid var(--red)}
+#toast.warn{border-bottom:3px solid var(--amber)}
+
+.tip{font-size:12px;color:var(--gray);background:var(--light);border-radius:8px;padding:10px 12px;margin-bottom:10px;line-height:1.5}
+.tip b{color:var(--navy)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">IMAC <span>·</span> Pesagem</div>
+  <div class="header-right" id="header-op">Configure a OP<br>na aba ⚙️</div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="goTab('pesar')">⚖️ Pesar</div>
+  <div class="tab" onclick="goTab('hist')">📋 Registro</div>
+  <div class="tab" onclick="goTab('cfg')">⚙️ Config</div>
+</div>
+
+<!-- ══ ABA PESAR ══ -->
+<div class="screen active" id="tab-pesar">
+
+  <!-- Insumo atual -->
+  <div class="insumo-box" id="insumo-box">
+    <div class="insumo-nome" id="insumo-nome">Nenhum insumo selecionado</div>
+    <div class="insumo-lote" id="insumo-lote">Configure a OP na aba ⚙️</div>
+    <div class="insumo-meta">
+      <div class="insumo-meta-item">
+        <div class="insumo-meta-label">Alvo</div>
+        <div class="insumo-meta-val" id="meta-alvo">—</div>
+      </div>
+      <div class="insumo-meta-item">
+        <div class="insumo-meta-label">Tolerância</div>
+        <div class="insumo-meta-val" id="meta-tol">—</div>
+      </div>
+      <div class="insumo-meta-item">
+        <div class="insumo-meta-label">Limite máx.</div>
+        <div class="insumo-meta-val warn" id="meta-max">—</div>
+      </div>
+      <div class="insumo-meta-item">
+        <div class="insumo-meta-label">Pesado</div>
+        <div class="insumo-meta-val ok" id="meta-pesado">0 g</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barra de progresso -->
+  <div class="gauge-wrap" id="gauge-wrap" style="display:none">
+    <div class="gauge-label">
+      <span>0</span>
+      <span id="gauge-label-max">—</span>
+    </div>
+    <div class="gauge-bar">
+      <div class="gauge-fill ok" id="gauge-fill" style="width:0%"></div>
+      <div class="gauge-limit" id="gauge-limit" style="left:80%"></div>
+    </div>
+    <div class="gauge-nums">
+      <span>0 g</span>
+      <span style="color:var(--amber);font-weight:600" id="gauge-alvo-label">Alvo: —</span>
+      <span id="gauge-max-label">Máx: —</span>
+    </div>
+  </div>
+
+  <!-- Display do peso -->
+  <div class="peso-display manual" id="peso-display" onclick="focusPeso()">
+    <div class="peso-valor" id="peso-valor">0,000</div>
+    <div class="peso-unidade">kg — toque para digitar</div>
+    <div class="peso-status ps-idle" id="peso-status">Aguardando pesagem</div>
+  </div>
+
+  <!-- Teclado numérico -->
+  <div class="numpad">
+    <div class="numpad-key" onclick="numPress('7')">7</div>
+    <div class="numpad-key" onclick="numPress('8')">8</div>
+    <div class="numpad-key" onclick="numPress('9')">9</div>
+    <div class="numpad-key" onclick="numPress('4')">4</div>
+    <div class="numpad-key" onclick="numPress('5')">5</div>
+    <div class="numpad-key" onclick="numPress('6')">6</div>
+    <div class="numpad-key" onclick="numPress('1')">1</div>
+    <div class="numpad-key" onclick="numPress('2')">2</div>
+    <div class="numpad-key" onclick="numPress('3')">3</div>
+    <div class="numpad-key ponto" onclick="numPress('.')">·</div>
+    <div class="numpad-key zero" onclick="numPress('0')">0</div>
+    <div class="numpad-key del" onclick="numDel()">⌫</div>
+  </div>
+
+  <!-- Validação -->
+  <div class="validacao" id="validacao"></div>
+
+  <!-- Botões -->
+  <button class="btn btn-green" id="btn-confirmar" onclick="confirmarPesagem()" disabled>
+    ✓ Confirmar pesagem e imprimir etiqueta
+  </button>
+  <button class="btn btn-outline" style="margin-top:8px" onclick="zerarPeso()">
+    Zerar
+  </button>
+
+</div>
+
+<!-- ══ ABA HISTÓRICO ══ -->
+<div class="screen" id="tab-hist">
+  <div class="card">
+    <div class="card-title">Pesagens desta sessão</div>
+    <div id="hist-lista">
+      <div style="text-align:center;padding:28px;color:var(--gray);font-size:13px">Nenhuma pesagem registrada.</div>
+    </div>
+  </div>
+  <button class="btn btn-outline" onclick="exportarCSV()">↓ Exportar CSV</button>
+</div>
+
+<!-- ══ ABA CONFIG ══ -->
+<div class="screen" id="tab-cfg">
+
+  <div class="card">
+    <div class="card-title">Ordem de Produção</div>
+    <div class="field">
+      <label>Número da OP</label>
+      <input type="text" id="cfg-op" placeholder="Ex: OP-260609-003">
+    </div>
+    <div class="field">
+      <label>Produto</label>
+      <input type="text" id="cfg-produto" placeholder="Ex: Pão Francês">
+    </div>
+    <div class="field">
+      <label>Operador</label>
+      <input type="text" id="cfg-operador" placeholder="Seu nome">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Insumo a pesar</div>
+    <div class="tip"><b>Dica:</b> configure 1 insumo por vez. Após confirmar todas as pesagens do insumo, troque para o próximo.</div>
+    <div class="field">
+      <label>Nome do insumo</label>
+      <input type="text" id="cfg-insumo" placeholder="Ex: Farinha de trigo">
+    </div>
+    <div class="field">
+      <label>Lote do insumo (do estoque)</label>
+      <input type="text" id="cfg-lote" placeholder="Ex: LT-FAR-260609-001">
+    </div>
+    <div class="field">
+      <label>Peso alvo por kit (gramas)</label>
+      <input type="number" id="cfg-alvo" placeholder="Ex: 500" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label>Tolerância ± (%)</label>
+      <select id="cfg-tol">
+        <option value="0.5">± 0,5%</option>
+        <option value="1" selected>± 1%</option>
+        <option value="2">± 2%</option>
+        <option value="5">± 5%</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Limite máximo absoluto (gramas)</label>
+      <input type="number" id="cfg-max" placeholder="Ex: 550 — bloqueia acima disso" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label>Qtd. de kits desta OP</label>
+      <input type="number" id="cfg-kits" placeholder="Ex: 130" inputmode="numeric">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Impressora Zebra</div>
+    <div class="tip"><b>IP do PC do estoque</b> (onde a GC420d está conectada). Deixe em branco para imprimir direto neste dispositivo.</div>
+    <div class="field">
+      <label>IP do PC (opcional)</label>
+      <input type="text" id="cfg-ip" placeholder="Ex: 192.168.1.100" inputmode="numeric">
+    </div>
+  </div>
+
+  <button class="btn btn-primary" onclick="salvarConfig()">✓ Salvar e começar pesagem</button>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── Estado ──────────────────────────────────────────────────
+let pesoStr = '';
+let historico = [];
+let config = JSON.parse(localStorage.getItem('imac-pesagem-cfg') || '{}');
+let kitAtual = 1;
+
+// ─── Init ────────────────────────────────────────────────────
+(function(){
+  if(config.op){
+    aplicarConfig();
+    document.getElementById('cfg-op').value       = config.op || '';
+    document.getElementById('cfg-produto').value  = config.produto || '';
+    document.getElementById('cfg-operador').value = config.operador || '';
+    document.getElementById('cfg-insumo').value   = config.insumo || '';
+    document.getElementById('cfg-lote').value     = config.lote || '';
+    document.getElementById('cfg-alvo').value     = config.alvo || '';
+    document.getElementById('cfg-tol').value      = config.tol || '1';
+    document.getElementById('cfg-max').value      = config.max || '';
+    document.getElementById('cfg-kits').value     = config.kits || '';
+    document.getElementById('cfg-ip').value       = config.ip || '';
+  }
+})();
+
+// ─── Abas ────────────────────────────────────────────────────
+function goTab(nome){
+  ['pesar','hist','cfg'].forEach((n,i)=>{
+    document.getElementById('tab-'+n).style.display = n===nome?'block':'none';
+    document.querySelectorAll('.tab')[i].classList.toggle('active', n===nome);
+  });
+  if(nome==='hist') renderHist();
+}
+document.getElementById('tab-hist').style.display='none';
+document.getElementById('tab-cfg').style.display='none';
+
+// ─── Teclado numérico ────────────────────────────────────────
+function numPress(ch){
+  if(ch==='.' && pesoStr.includes('.')) return;
+  if(pesoStr.length >= 7) return;
+  pesoStr += ch;
+  atualizarDisplay();
+}
+function numDel(){
+  pesoStr = pesoStr.slice(0,-1);
+  atualizarDisplay();
+}
+function zerarPeso(){
+  pesoStr = '';
+  atualizarDisplay();
+}
+function focusPeso(){ /* já usa numpad */ }
+
+function atualizarDisplay(){
+  const val = parseFloat(pesoStr) || 0;
+  const kg = val / 1000;
+  document.getElementById('peso-valor').textContent =
+    kg.toLocaleString('pt-BR',{minimumFractionDigits:3,maximumFractionDigits:3});
+
+  validarPeso(val);
+  atualizarGauge(val);
+}
+
+// ─── Validação ───────────────────────────────────────────────
+function validarPeso(gramas){
+  const el = document.getElementById('validacao');
+  const btn = document.getElementById('btn-confirmar');
+  const statusEl = document.getElementById('peso-status');
+  const display = document.getElementById('peso-display');
+
+  if(!config.alvo || gramas === 0){
+    el.style.display='none';
+    btn.disabled = true;
+    statusEl.className='peso-status ps-idle';
+    statusEl.textContent='Aguardando pesagem';
+    return;
+  }
+
+  const alvo  = parseFloat(config.alvo);
+  const tolPct= parseFloat(config.tol)/100;
+  const max   = config.max ? parseFloat(config.max) : alvo*(1+tolPct*3);
+  const minVal= alvo*(1-tolPct);
+  const maxTol= alvo*(1+tolPct);
+
+  el.style.display='block';
+
+  if(gramas > max){
+    el.className='validacao v-over';
+    el.textContent=`⛔ BLOQUEADO — ${gramas}g excede o limite máximo de ${max}g`;
+    btn.disabled=true;
+    statusEl.className='peso-status ps-over';
+    statusEl.textContent='Acima do limite';
+  } else if(gramas > maxTol){
+    el.className='validacao v-warn';
+    el.textContent=`⚠️ ACIMA da tolerância — ${gramas}g (alvo ${alvo}g ±${config.tol}%)`;
+    btn.disabled=false;
+    statusEl.className='peso-status ps-warn';
+    statusEl.textContent='Atenção — acima';
+  } else if(gramas < minVal && gramas > 0){
+    el.className='validacao v-warn';
+    el.textContent=`⚠️ ABAIXO da tolerância — ${gramas}g (alvo ${alvo}g ±${config.tol}%)`;
+    btn.disabled=false;
+    statusEl.className='peso-status ps-warn';
+    statusEl.textContent='Atenção — abaixo';
+  } else if(gramas > 0){
+    el.className='validacao v-ok';
+    el.textContent=`✓ DENTRO da tolerância — ${gramas}g (alvo ${alvo}g ±${config.tol}%)`;
+    btn.disabled=false;
+    statusEl.className='peso-status ps-ok';
+    statusEl.textContent='✓ OK';
+  } else {
+    el.style.display='none';
+    btn.disabled=true;
+    statusEl.className='peso-status ps-idle';
+    statusEl.textContent='Aguardando pesagem';
+  }
+}
+
+// ─── Gauge ───────────────────────────────────────────────────
+function atualizarGauge(gramas){
+  if(!config.alvo){ document.getElementById('gauge-wrap').style.display='none'; return; }
+  document.getElementById('gauge-wrap').style.display='block';
+
+  const alvo = parseFloat(config.alvo);
+  const max  = config.max ? parseFloat(config.max) : alvo*1.2;
+  const escala = max * 1.05;
+  const pct  = Math.min((gramas/escala)*100, 100);
+  const alvoPos = (alvo/escala)*100;
+  const maxPos  = (max/escala)*100;
+
+  const fill = document.getElementById('gauge-fill');
+  fill.style.width = pct+'%';
+
+  const tol = parseFloat(config.tol)/100;
+  if(gramas > max) fill.className='gauge-fill over';
+  else if(gramas > alvo*(1+tol)) fill.className='gauge-fill warn';
+  else fill.className='gauge-fill ok';
+
+  document.getElementById('gauge-limit').style.left = maxPos+'%';
+  document.getElementById('gauge-label-max').textContent = max+'g (máx)';
+  document.getElementById('gauge-alvo-label').textContent = 'Alvo: '+alvo+'g';
+  document.getElementById('gauge-max-label').textContent  = 'Máx: '+max+'g';
+}
+
+// ─── Confirmar pesagem ───────────────────────────────────────
+function confirmarPesagem(){
+  const gramas = parseFloat(pesoStr) || 0;
+  if(!gramas){ toast('Digite o peso primeiro','error'); return; }
+
+  const alvo   = parseFloat(config.alvo);
+  const desvio = ((gramas-alvo)/alvo*100).toFixed(2);
+  const agora  = new Date();
+  const loteKit= `KIT-${fmtDMY(agora)}-${String(kitAtual).padStart(3,'0')}`;
+
+  const registro = {
+    kit: loteKit, kitNum: kitAtual,
+    op: config.op, produto: config.produto,
+    insumo: config.insumo, lote: config.lote,
+    pesoAlvo: alvo, pesoReal: gramas, desvio,
+    operador: config.operador,
+    hora: agora.toLocaleTimeString('pt-BR'),
+    ts: agora.toISOString()
+  };
+
+  historico.unshift(registro);
+  kitAtual++;
+
+  // Atualiza header
+  document.getElementById('meta-pesado').textContent = gramas+'g';
+
+  toast(`Kit ${loteKit} registrado!`, 'success');
+
+  // Imprime
+  imprimirEtiqueta(registro);
+
+  // Zera para próxima pesagem
+  setTimeout(()=>{
+    pesoStr='';
+    atualizarDisplay();
+    document.getElementById('validacao').style.display='none';
+    document.getElementById('btn-confirmar').disabled=true;
+  }, 800);
+}
+
+// ─── Impressão ───────────────────────────────────────────────
+function imprimirEtiqueta(d){
+  // Gera QR em memória
+  const div=document.createElement('div');
+  div.style.cssText='position:absolute;left:-9999px;top:0';
+  document.body.appendChild(div);
+  const qrData=JSON.stringify({kit:d.kit,op:d.op,insumo:d.insumo,lote:d.lote,pesoReal:d.pesoReal,hora:d.hora});
+  new QRCode(div,{text:qrData,width:90,height:90,colorDark:'#1a1a2e',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});
+
+  setTimeout(()=>{
+    const canvas=div.querySelector('canvas');
+    const qrSrc=canvas?canvas.toDataURL('image/png'):'';
+    document.body.removeChild(div);
+
+    const dentro = Math.abs(parseFloat(d.desvio)) <= parseFloat(config.tol);
+    const statusStr = dentro ? '✓ OK' : `⚠ Desvio ${d.desvio}%`;
+
+    const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;width:100mm;padding:3mm;font-size:8pt;color:#000;background:#fff}
+.emp{font-size:6pt;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#555;border-bottom:1px solid #ccc;padding-bottom:1.5mm;margin-bottom:1.5mm}
+.layout{display:flex;gap:3mm}
+.info{flex:1}
+.kit-tag{background:#1a1a2e;color:#fff;font-family:'Courier New',monospace;font-size:9pt;font-weight:700;padding:1.5mm 2.5mm;border-radius:3px;display:inline-block;margin-bottom:2mm}
+.prod{font-size:11pt;font-weight:700;margin-bottom:1.5mm}
+.r{display:flex;gap:4px;margin-bottom:1.2mm;font-size:7.5pt;line-height:1.3}
+.k{font-weight:700;color:#444;min-width:46px;flex-shrink:0}
+.v{color:#000}
+.status{font-size:7.5pt;font-weight:700;padding:1mm 2mm;border-radius:2px;display:inline-block;margin-top:1mm}
+.st-ok{background:#d1fae5;color:#065f46}
+.st-warn{background:#fef3c7;color:#92400e}
+.qr-b{flex-shrink:0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:.5mm}
+.qr-b img{width:21mm;height:21mm}
+.qc{font-size:5.5pt;color:#666}
+.foot{border-top:1px solid #ccc;margin-top:1.5mm;padding-top:1mm;font-size:6pt;color:#666;display:flex;justify-content:space-between}
+@media print{@page{size:100mm 70mm;margin:0}body{padding:2.5mm}}
+</style></head><body>
+<div class="emp">IMAC — Sala de Pesagem</div>
+<div class="layout">
+<div class="info">
+<div class="prod">${d.insumo}</div>
+<div class="kit-tag">${d.kit}</div>
+<div class="r"><span class="k">OP</span><span class="v">${d.op}</span></div>
+<div class="r"><span class="k">Produto</span><span class="v">${d.produto}</span></div>
+<div class="r"><span class="k">Lote</span><span class="v">${d.lote}</span></div>
+<div class="r"><span class="k">Alvo</span><span class="v">${d.pesoAlvo} g</span></div>
+<div class="r"><span class="k">Pesado</span><span class="v"><b>${d.pesoReal} g</b></span></div>
+<div class="r"><span class="k">Desvio</span><span class="v">${d.desvio}%</span></div>
+<div class="r"><span class="k">Operador</span><span class="v">${d.operador}</span></div>
+<span class="status ${dentro?'st-ok':'st-warn'}">${statusStr}</span>
+</div>
+<div class="qr-b">
+${qrSrc?`<img src="${qrSrc}">`:''}
+<div class="qc">Kit ${d.kitNum}</div>
+</div>
+</div>
+<div class="foot"><span>IMAC · Rastreabilidade</span><span>${d.hora}</span></div>
+<script>window.onload=function(){window.print();setTimeout(function(){window.close()},900)}<\/script>
+</body></html>`;
+
+    const w=window.open('','_blank');
+    if(w){w.document.write(html);w.document.close();}
+    else toast('Permita popups neste browser','error');
+  },400);
+}
+
+// ─── Config ──────────────────────────────────────────────────
+function salvarConfig(){
+  config={
+    op:      v('cfg-op'),
+    produto: v('cfg-produto'),
+    operador:v('cfg-operador'),
+    insumo:  v('cfg-insumo'),
+    lote:    v('cfg-lote'),
+    alvo:    v('cfg-alvo'),
+    tol:     document.getElementById('cfg-tol').value,
+    max:     v('cfg-max'),
+    kits:    v('cfg-kits'),
+    ip:      v('cfg-ip')
+  };
+  if(!config.insumo||!config.alvo){
+    toast('Preencha pelo menos Insumo e Peso alvo','error'); return;
+  }
+  localStorage.setItem('imac-pesagem-cfg', JSON.stringify(config));
+  kitAtual=1;
+  aplicarConfig();
+  goTab('pesar');
+  toast('Configuração salva — pronto para pesar!','success');
+}
+
+function aplicarConfig(){
+  if(!config.insumo) return;
+  document.getElementById('insumo-nome').textContent = config.insumo || '—';
+  document.getElementById('insumo-lote').textContent = config.lote ? 'Lote: '+config.lote : 'Lote não informado';
+  const alvo=parseFloat(config.alvo)||0;
+  const tol=parseFloat(config.tol)||1;
+  const max=config.max?parseFloat(config.max):Math.round(alvo*(1+tol/100*3));
+  document.getElementById('meta-alvo').textContent  = alvo+'g';
+  document.getElementById('meta-tol').textContent   = '±'+tol+'%';
+  document.getElementById('meta-max').textContent   = max+'g';
+  document.getElementById('meta-pesado').textContent= '0g';
+  document.getElementById('header-op').innerHTML   = (config.op||'OP?')+'<br>'+(config.produto||'');
+  document.getElementById('gauge-wrap').style.display='block';
+  atualizarGauge(0);
+}
+
+// ─── Histórico ───────────────────────────────────────────────
+function renderHist(){
+  const el=document.getElementById('hist-lista');
+  if(!historico.length){
+    el.innerHTML='<div style="text-align:center;padding:28px;color:var(--gray);font-size:13px">Nenhuma pesagem ainda.</div>';
+    return;
+  }
+  el.innerHTML=historico.map(h=>`
+    <div class="hist-item">
+      <div class="hist-insumo">${h.insumo} — Kit ${h.kitNum}</div>
+      <div class="hist-meta">${h.kit} · ${h.hora} · ${h.operador}</div>
+      <div class="hist-peso ${Math.abs(parseFloat(h.desvio))<=parseFloat(config.tol||1)?'ok':'over'}">
+        ${h.pesoReal}g (alvo ${h.pesoAlvo}g · desvio ${h.desvio}%)
+      </div>
+    </div>
+  `).join('');
+}
+
+function exportarCSV(){
+  if(!historico.length){toast('Nenhuma pesagem para exportar','error');return;}
+  const header='Kit,OP,Produto,Insumo,Lote,Alvo(g),Pesado(g),Desvio(%),Operador,Hora\n';
+  const rows=historico.map(h=>[h.kit,h.op,h.produto,h.insumo,h.lote,h.pesoAlvo,h.pesoReal,h.desvio,h.operador,h.hora].join(',')).join('\n');
+  const blob=new Blob([header+rows],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='pesagem-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  toast('CSV exportado!','success');
+}
+
+// ─── Helpers ─────────────────────────────────────────────────
+function v(id){return(document.getElementById(id)?.value||'').trim()}
+function fmtDMY(d){return String(d.getDate()).padStart(2,'0')+String(d.getMonth()+1).padStart(2,'0')+String(d.getFullYear()).slice(-2)}
+function toast(msg,tipo='success'){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className='show '+tipo;
+  clearTimeout(window._tt);
+  window._tt=setTimeout(()=>{el.className=''},3000);
+}
+</script>
+</body>
+</html>
