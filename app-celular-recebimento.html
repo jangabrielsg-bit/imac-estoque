@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>IMAC — Recebimento</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1a1a2e;
+  --blue:#4fc3f7;
+  --green:#43c59e;
+  --red:#ef5350;
+  --gray:#6b7a99;
+  --light:#f0f2f5;
+  --border:#dde3ee;
+}
+body{
+  font-family:'Segoe UI',Arial,sans-serif;
+  background:var(--light);
+  color:var(--navy);
+  min-height:100vh;
+  font-size:15px;
+}
+
+/* HEADER */
+header{
+  background:var(--navy);
+  color:#fff;
+  padding:0 16px;
+  height:52px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  position:sticky;top:0;z-index:200;
+}
+.logo{font-size:17px;font-weight:700;letter-spacing:.03em}
+.logo span{color:var(--blue)}
+.header-sub{font-size:11px;color:#90a0b0}
+
+/* ABAS */
+.tabs{
+  display:flex;
+  background:#fff;
+  border-bottom:2px solid var(--border);
+  position:sticky;top:52px;z-index:100;
+}
+.tab{
+  flex:1;padding:13px 8px;
+  text-align:center;font-size:13px;font-weight:600;
+  color:var(--gray);cursor:pointer;
+  border-bottom:2px solid transparent;
+  margin-bottom:-2px;transition:all .15s;
+}
+.tab.active{color:var(--navy);border-bottom-color:var(--blue)}
+
+/* TELAS */
+.screen{display:none;padding:16px}
+.screen.active{display:block}
+
+/* CARDS */
+.card{
+  background:#fff;border-radius:12px;
+  padding:20px;margin-bottom:14px;
+  border:1px solid var(--border);
+}
+.card-title{
+  font-size:11px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.07em;
+  color:var(--gray);margin-bottom:16px;
+  display:flex;align-items:center;gap:8px;
+}
+.card-title::before{
+  content:'';display:block;
+  width:3px;height:13px;
+  background:var(--blue);border-radius:2px;
+}
+
+/* SCANNER */
+#reader{
+  width:100%;border-radius:10px;
+  overflow:hidden;background:#000;
+  min-height:200px;
+}
+#reader video{width:100%!important;border-radius:10px}
+.scan-result{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 14px;
+  background:#f0fdf8;border:1.5px solid var(--green);
+  border-radius:8px;margin-top:10px;
+  font-size:13px;font-weight:600;
+  color:#1a4a3a;
+  font-family:'Courier New',monospace;
+}
+.scan-result .icon{font-size:18px;flex-shrink:0}
+
+/* CAMPOS */
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+label{font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.05em}
+input,select{
+  border:1.5px solid var(--border);border-radius:8px;
+  padding:11px 14px;font-size:15px;
+  color:var(--navy);background:#fff;
+  transition:border-color .15s;
+  font-family:inherit;width:100%;
+}
+input:focus,select:focus{outline:none;border-color:var(--blue);background:#f8fdff}
+input.filled{border-color:var(--green);background:#f0fdf8}
+
+/* BOTÕES */
+.btn{
+  border:none;border-radius:10px;
+  padding:14px 20px;font-size:15px;font-weight:600;
+  cursor:pointer;transition:all .15s;
+  font-family:inherit;width:100%;display:block;
+  text-align:center;
+}
+.btn+.btn{margin-top:10px}
+.btn-primary{background:var(--navy);color:#fff}
+.btn-primary:hover{background:#2d2d50}
+.btn-primary:active{transform:scale(.98)}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover{background:#38b08a}
+.btn-green:active{transform:scale(.98)}
+.btn-blue{background:var(--blue);color:var(--navy);font-weight:700}
+.btn-blue:hover{background:#29b6f6}
+.btn-outline{background:#fff;color:var(--gray);border:1.5px solid var(--border)}
+.btn-outline:hover{background:var(--light)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
+
+/* PREVIEW ETIQUETA */
+.label-box{
+  border:2px dashed var(--blue);border-radius:10px;
+  padding:16px;background:#f8fdff;margin-bottom:14px;
+}
+.label-inner{
+  background:#fff;border:1px solid var(--border);
+  border-radius:8px;padding:14px;
+  display:flex;gap:14px;align-items:flex-start;
+}
+.label-info{flex:1;min-width:0}
+.label-empresa{font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--gray);text-transform:uppercase;margin-bottom:5px}
+.label-produto{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:8px;line-height:1.3}
+.lote-tag{
+  background:var(--navy);color:#fff;
+  font-size:11px;font-weight:700;font-family:'Courier New',monospace;
+  padding:4px 8px;border-radius:4px;
+  display:inline-block;margin-bottom:8px;letter-spacing:.03em;
+}
+.lrow{display:flex;gap:6px;margin-bottom:3px;font-size:10px}
+.lkey{color:var(--gray);font-weight:700;min-width:50px;flex-shrink:0}
+.lval{color:var(--navy);font-weight:500;word-break:break-all}
+.label-qr{flex-shrink:0;text-align:center}
+.label-qr canvas,.label-qr img{width:80px!important;height:80px!important}
+.qr-caption{font-size:8px;color:var(--gray);margin-top:3px}
+
+/* HISTÓRICO */
+.hist-item{
+  padding:13px 0;border-bottom:1px solid #f0f2f5;
+  display:flex;flex-direction:column;gap:4px;
+}
+.hist-item:last-child{border-bottom:none}
+.hist-lote{font-family:'Courier New',monospace;font-size:12px;font-weight:700;color:var(--blue)}
+.hist-prod{font-size:14px;font-weight:600;color:var(--navy)}
+.hist-meta{font-size:12px;color:var(--gray)}
+.hist-actions{display:flex;gap:8px;margin-top:6px}
+.btn-sm{
+  border:1.5px solid var(--border);border-radius:6px;
+  padding:6px 14px;font-size:12px;font-weight:600;
+  cursor:pointer;background:#fff;color:var(--gray);
+  font-family:inherit;transition:all .15s;
+}
+.btn-sm:hover{background:var(--light)}
+.btn-sm.blue{border-color:var(--blue);color:var(--blue)}
+.btn-sm.blue:hover{background:#e8f7fe}
+
+/* TOAST */
+#toast{
+  position:fixed;bottom:20px;left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:var(--navy);color:#fff;
+  padding:13px 22px;border-radius:10px;
+  font-size:14px;font-weight:500;
+  opacity:0;transition:all .25s;z-index:999;
+  pointer-events:none;white-space:nowrap;
+  max-width:90vw;text-align:center;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.success{border-bottom:3px solid var(--green)}
+#toast.error{border-bottom:3px solid var(--red)}
+
+/* IP CONFIG */
+.ip-row{display:flex;gap:10px;align-items:flex-end}
+.ip-row input{flex:1}
+.ip-status{
+  font-size:12px;padding:8px 12px;border-radius:8px;
+  background:var(--light);color:var(--gray);text-align:center;
+  margin-top:8px;
+}
+.ip-status.ok{background:#f0fdf8;color:#1a4a3a;border:1px solid var(--green)}
+.ip-status.fail{background:#fef2f2;color:#7f1d1d;border:1px solid var(--red)}
+
+.tip{
+  font-size:12px;color:var(--gray);
+  background:var(--light);border-radius:8px;
+  padding:10px 13px;margin-bottom:12px;line-height:1.5;
+}
+.tip strong{color:var(--navy)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">IMAC <span>·</span> Estoque</div>
+  <div class="header-sub">Recebimento v2</div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('scan')">📷 Bipar</div>
+  <div class="tab" onclick="showTab('form')">📝 Dados</div>
+  <div class="tab" onclick="showTab('hist')">📋 Histórico</div>
+  <div class="tab" onclick="showTab('cfg')">⚙️ Config</div>
+</div>
+
+<!-- ══════════ ABA 1: SCANNER ══════════ -->
+<div class="screen active" id="tab-scan">
+
+  <div class="card">
+    <div class="card-title">Bipar mercadoria</div>
+    <div class="tip">Aponte a câmera para o código de barras ou QR code da embalagem.</div>
+    <div id="reader"></div>
+    <div id="scan-result" style="display:none" class="scan-result">
+      <span class="icon">✓</span>
+      <span id="scan-text">—</span>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:10px">
+      <button class="btn btn-primary" style="flex:1" id="btn-iniciar" onclick="iniciarScanner()">Iniciar câmera</button>
+      <button class="btn btn-outline" style="flex:1;width:auto" onclick="limparScan()">Limpar</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Ou digite o código</div>
+    <div class="field">
+      <label>Código manual</label>
+      <input type="text" id="codigo-manual" placeholder="Digite ou cole o código..."
+        oninput="setCodigoManual(this.value)">
+    </div>
+    <button class="btn btn-outline" onclick="usarCodigoManual()">Usar este código →</button>
+  </div>
+
+  <button class="btn btn-green" onclick="showTab('form')" id="btn-ir-form" disabled>
+    Preencher dados da mercadoria →
+  </button>
+</div>
+
+<!-- ══════════ ABA 2: FORMULÁRIO ══════════ -->
+<div class="screen" id="tab-form">
+
+  <div class="card">
+    <div class="card-title">Informações do produto</div>
+
+    <div id="codigo-exibido" style="display:none;margin-bottom:14px" class="scan-result">
+      <span class="icon">📦</span>
+      <span id="codigo-exibido-txt">—</span>
+    </div>
+
+    <div class="field">
+      <label>Produto / Descrição *</label>
+      <input type="text" id="produto" placeholder="Ex: Fermento biológico seco">
+    </div>
+    <div class="field">
+      <label>Fornecedor</label>
+      <input type="text" id="fornecedor" placeholder="Ex: Lesaffre do Brasil">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Dados do lote e nota</div>
+
+    <div class="field">
+      <label>Nº da Nota Fiscal *</label>
+      <input type="text" id="nf" placeholder="Ex: 004521" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label>Lote do fornecedor *</label>
+      <input type="text" id="lote-forn" placeholder="Ex: FAB-240601">
+    </div>
+    <div class="field">
+      <label>Validade *</label>
+      <input type="date" id="validade">
+    </div>
+    <div class="field">
+      <label>Data de recebimento</label>
+      <input type="date" id="data-rec">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Estoque</div>
+
+    <div class="field">
+      <label>Quantidade recebida</label>
+      <input type="text" id="quantidade" placeholder="Ex: 30 cx × 25 un">
+    </div>
+    <div class="field">
+      <label>Endereçamento (localização)</label>
+      <input type="text" id="endereco" placeholder="Ex: A-03-02">
+    </div>
+    <div class="field">
+      <label>Responsável</label>
+      <input type="text" id="responsavel" placeholder="Seu nome">
+    </div>
+    <div class="field">
+      <label>Observações</label>
+      <input type="text" id="obs" placeholder="Opcional">
+    </div>
+  </div>
+
+  <button class="btn btn-green" onclick="gerarEtiqueta()">✓ Gerar etiqueta</button>
+  <button class="btn btn-outline" style="margin-top:10px" onclick="showTab('scan')">← Voltar</button>
+</div>
+
+<!-- ══════════ ABA 3: PREVIEW + IMPRIMIR ══════════ -->
+<div class="screen" id="tab-preview" style="display:none">
+
+  <div class="card">
+    <div class="card-title">Etiqueta gerada</div>
+    <div class="label-box">
+      <div class="label-inner">
+        <div class="label-info">
+          <div class="label-empresa">IMAC — Controle de Estoque</div>
+          <div class="label-produto" id="p-produto">—</div>
+          <div class="lote-tag" id="p-lote-imac">—</div>
+          <div class="lrow"><span class="lkey">Lote forn.</span><span class="lval" id="p-lote-forn">—</span></div>
+          <div class="lrow"><span class="lkey">NF</span><span class="lval" id="p-nf">—</span></div>
+          <div class="lrow"><span class="lkey">Fornecedor</span><span class="lval" id="p-forn">—</span></div>
+          <div class="lrow"><span class="lkey">Validade</span><span class="lval" id="p-val">—</span></div>
+          <div class="lrow"><span class="lkey">Qtd.</span><span class="lval" id="p-qtd">—</span></div>
+          <div class="lrow"><span class="lkey">Local</span><span class="lval" id="p-end">—</span></div>
+          <div class="lrow"><span class="lkey">Entrada</span><span class="lval" id="p-data">—</span></div>
+          <div class="lrow"><span class="lkey">Operador</span><span class="lval" id="p-resp">—</span></div>
+        </div>
+        <div class="label-qr">
+          <div id="qrcode"></div>
+          <div class="qr-caption">IMAC QR</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Enviar impressão</div>
+    <div class="tip" id="tip-impressao">
+      <strong>Como imprimir:</strong> A etiqueta será enviada para o PC do estoque via rede local.
+      Configure o IP do PC na aba ⚙️ Config.
+    </div>
+
+    <button class="btn btn-primary" onclick="imprimirViaPC()" id="btn-imprimir">
+      🖨 Imprimir na Zebra (via PC)
+    </button>
+
+    <div style="margin-top:10px;text-align:center;font-size:12px;color:var(--gray)">— ou —</div>
+
+    <button class="btn btn-outline" style="margin-top:10px" onclick="imprimirDireto()">
+      📱 Imprimir daqui (se impressora na rede)
+    </button>
+    <button class="btn btn-outline" style="margin-top:10px" onclick="novoRecebimento()">
+      + Novo recebimento
+    </button>
+  </div>
+
+</div>
+
+<!-- ══════════ ABA 4: HISTÓRICO ══════════ -->
+<div class="screen" id="tab-hist">
+  <div class="card">
+    <div class="card-title">Recebimentos de hoje</div>
+    <div id="historico-lista">
+      <div style="text-align:center;padding:32px;color:var(--gray);font-size:13px">
+        Nenhum recebimento ainda.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ ABA 5: CONFIG ══════════ -->
+<div class="screen" id="tab-cfg">
+  <div class="card">
+    <div class="card-title">Impressora — PC do estoque</div>
+    <div class="tip">
+      <strong>Como funciona:</strong> O celular envia os dados da etiqueta para o PC do estoque via Wi-Fi interno.
+      O PC precisa estar com o servidor de impressão aberto (arquivo <strong>servidor-impressao.html</strong> que você vai abrir no PC).
+    </div>
+
+    <div class="field">
+      <label>IP do PC do estoque</label>
+      <div class="ip-row">
+        <input type="text" id="pc-ip" placeholder="Ex: 192.168.1.100"
+          value="" inputmode="numeric">
+        <button class="btn btn-primary" style="width:auto;padding:11px 18px;font-size:13px"
+          onclick="salvarIP()">Salvar</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Porta</label>
+      <input type="text" id="pc-porta" value="3099" inputmode="numeric">
+    </div>
+    <div id="ip-status" class="ip-status">Configure o IP do PC para enviar impressões.</div>
+
+    <button class="btn btn-outline" style="margin-top:14px" onclick="testarConexao()">
+      Testar conexão com o PC
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Sobre</div>
+    <div style="font-size:13px;color:var(--gray);line-height:1.7">
+      <b>IMAC Recebimento v2</b><br>
+      App web — funciona no celular via browser.<br>
+      Não precisa de instalação.<br>
+      Dados salvos localmente no celular.<br><br>
+      <b>Configuração necessária no PC:</b><br>
+      Abrir o arquivo <b>servidor-impressao.html</b> no Chrome do PC do estoque e deixar aberto.
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── Estado global ───────────────────────────────────────────
+let codigoAtual = '';
+let dadosAtuais = null;
+let historico = JSON.parse(localStorage.getItem('imac-rec') || '[]');
+let scanner = null;
+let scannerAtivo = false;
+
+// IP do PC (configurável)
+let pcIP   = localStorage.getItem('imac-pc-ip')   || '';
+let pcPorta= localStorage.getItem('imac-pc-porta') || '3099';
+
+// ─── Init ────────────────────────────────────────────────────
+(function(){
+  const hoje = new Date().toISOString().split('T')[0];
+  document.getElementById('data-rec').value = hoje;
+  document.getElementById('pc-ip').value    = pcIP;
+  document.getElementById('pc-porta').value = pcPorta;
+  renderHistorico();
+})();
+
+// ─── Abas ────────────────────────────────────────────────────
+function showTab(nome) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const nomes = ['scan','form','hist','cfg'];
+    t.classList.toggle('active', nomes[i] === nome);
+  });
+  ['tab-scan','tab-form','tab-preview','tab-hist','tab-cfg'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+
+  if (nome === 'preview' && dadosAtuais) {
+    document.getElementById('tab-preview').style.display = 'block';
+  } else if (nome === 'hist') {
+    document.getElementById('tab-hist').style.display = 'block';
+    renderHistorico();
+  } else if (nome === 'cfg') {
+    document.getElementById('tab-cfg').style.display = 'block';
+  } else if (nome === 'form') {
+    document.getElementById('tab-form').style.display = 'block';
+    pararScanner();
+  } else {
+    document.getElementById('tab-scan').style.display = 'block';
+  }
+}
+
+// ─── Scanner ─────────────────────────────────────────────────
+function iniciarScanner() {
+  if (scannerAtivo) { pararScanner(); return; }
+
+  const btn = document.getElementById('btn-iniciar');
+  btn.textContent = 'Parar câmera';
+
+  scanner = new Html5Qrcode("reader");
+  scanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: { width: 260, height: 180 } },
+    (decodedText) => {
+      codigoLido(decodedText);
+    },
+    () => {}
+  ).then(() => {
+    scannerAtivo = true;
+  }).catch(err => {
+    toast('Erro na câmera: ' + err, 'error');
+    btn.textContent = 'Iniciar câmera';
+  });
+}
+
+function pararScanner() {
+  if (scanner && scannerAtivo) {
+    scanner.stop().catch(()=>{});
+    scannerAtivo = false;
+  }
+  document.getElementById('btn-iniciar').textContent = 'Iniciar câmera';
+}
+
+function codigoLido(codigo) {
+  pararScanner();
+  setarCodigo(codigo);
+  toast('Código lido: ' + codigo.slice(0,30), 'success');
+}
+
+function setarCodigo(codigo) {
+  codigoAtual = codigo;
+  document.getElementById('scan-result').style.display = 'flex';
+  document.getElementById('scan-text').textContent = codigo.length > 40 ? codigo.slice(0,40)+'…' : codigo;
+  document.getElementById('btn-ir-form').disabled = false;
+
+  // Mostra no formulário
+  document.getElementById('codigo-exibido').style.display = 'flex';
+  document.getElementById('codigo-exibido-txt').textContent = codigo.length > 50 ? codigo.slice(0,50)+'…' : codigo;
+}
+
+function limparScan() {
+  codigoAtual = '';
+  document.getElementById('scan-result').style.display = 'none';
+  document.getElementById('scan-text').textContent = '—';
+  document.getElementById('btn-ir-form').disabled = true;
+  document.getElementById('codigo-exibido').style.display = 'none';
+  document.getElementById('codigo-manual').value = '';
+  pararScanner();
+}
+
+function setCodigoManual(val) {
+  // preview enquanto digita
+}
+function usarCodigoManual() {
+  const val = document.getElementById('codigo-manual').value.trim();
+  if (!val) { toast('Digite um código primeiro', 'error'); return; }
+  setarCodigo(val);
+  toast('Código definido!', 'success');
+}
+
+// ─── Gerar lote IMAC ─────────────────────────────────────────
+function gerarLoteImac(produto) {
+  const d = new Date();
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const yy = String(d.getFullYear()).slice(-2);
+  const seq = String(historico.filter(h =>
+    h.geradoEm && h.geradoEm.startsWith(d.toISOString().split('T')[0])
+  ).length + 1).padStart(3,'0');
+  const pref = produto.replace(/[^a-zA-ZÀ-ú]/g,'').toUpperCase().slice(0,4) || 'INSU';
+  return `LT-${pref}-${dd}${mm}${yy}-${seq}`;
+}
+
+// ─── Gerar etiqueta ──────────────────────────────────────────
+function gerarEtiqueta() {
+  const produto    = v('produto');
+  const fornecedor = v('fornecedor');
+  const nf         = v('nf');
+  const loteForn   = v('lote-forn');
+  const validade   = v('validade');
+  const dataRec    = v('data-rec');
+  const quantidade = v('quantidade');
+  const endereco   = v('endereco');
+  const responsavel= v('responsavel');
+  const obs        = v('obs');
+
+  if (!produto || !nf || !loteForn || !validade) {
+    toast('Preencha: Produto, NF, Lote e Validade', 'error');
+    return;
+  }
+
+  const loteImac = gerarLoteImac(produto);
+
+  dadosAtuais = {
+    loteImac, produto, fornecedor, nf, loteForn,
+    validade: fmtD(validade), dataRec: fmtD(dataRec),
+    quantidade, endereco, responsavel, obs,
+    codigo: codigoAtual,
+    geradoEm: new Date().toISOString()
+  };
+
+  // Preenche preview
+  st('p-produto', produto);
+  st('p-lote-imac', loteImac);
+  st('p-lote-forn', loteForn);
+  st('p-nf', 'NF ' + nf);
+  st('p-forn', fornecedor || '—');
+  st('p-val', fmtD(validade));
+  st('p-qtd', quantidade || '—');
+  st('p-end', endereco || '—');
+  st('p-data', fmtD(dataRec));
+  st('p-resp', responsavel || '—');
+
+  // QR code
+  document.getElementById('qrcode').innerHTML = '';
+  const qrData = JSON.stringify({
+    loteImac, produto, loteForn, nf,
+    validade: fmtD(validade), dataRec: fmtD(dataRec),
+    endereco, fornecedor, codigo: codigoAtual
+  });
+  new QRCode(document.getElementById('qrcode'), {
+    text: qrData, width: 80, height: 80,
+    colorDark:'#1a1a2e', colorLight:'#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+
+  // Salva histórico
+  historico.unshift(dadosAtuais);
+  localStorage.setItem('imac-rec', JSON.stringify(historico.slice(0,100)));
+
+  toast('Etiqueta gerada! ' + loteImac, 'success');
+
+  // Vai para aba preview
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  ['tab-scan','tab-form','tab-hist','tab-cfg'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  document.getElementById('tab-preview').style.display = 'block';
+  window.scrollTo(0,0);
+}
+
+// ─── Impressão via PC (servidor rodando no PC) ───────────────
+async function imprimirViaPC() {
+  if (!pcIP) {
+    toast('Configure o IP do PC na aba ⚙️ Config', 'error');
+    showTab('cfg'); return;
+  }
+  if (!dadosAtuais) return;
+
+  const btn = document.getElementById('btn-imprimir');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  try {
+    const url = `http://${pcIP}:${pcPorta}/imprimir`;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(dadosAtuais),
+      signal: AbortSignal.timeout(5000)
+    });
+    if (resp.ok) {
+      toast('✓ Enviado para a impressora!', 'success');
+    } else {
+      throw new Error('Servidor retornou erro ' + resp.status);
+    }
+  } catch(e) {
+    toast('Falha: ' + e.message + '. Use "Imprimir daqui" como alternativa.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🖨 Imprimir na Zebra (via PC)';
+  }
+}
+
+// ─── Impressão direta (abre janela no celular → salva/compartilha) ──
+function imprimirDireto() {
+  if (!dadosAtuais) return;
+  setTimeout(() => {
+    const qrEl  = document.getElementById('qrcode');
+    const canvas= qrEl.querySelector('canvas');
+    const qrSrc = canvas ? canvas.toDataURL('image/png') : '';
+    const d = dadosAtuais;
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;width:100mm;padding:3mm;font-size:8.5pt;color:#000;background:#fff}
+.emp{font-size:6.5pt;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#555;border-bottom:1px solid #ccc;padding-bottom:1.5mm;margin-bottom:1.5mm}
+.layout{display:flex;gap:3mm;align-items:flex-start}
+.info{flex:1}
+.prod{font-size:11pt;font-weight:700;margin-bottom:1.5mm;line-height:1.2}
+.lote-tag{background:#1a1a2e;color:#fff;font-size:8pt;font-weight:700;font-family:'Courier New',monospace;padding:1mm 2mm;border-radius:2px;display:inline-block;margin-bottom:1.5mm}
+.r{display:flex;gap:4px;margin-bottom:1mm;font-size:7.5pt}
+.k{font-weight:700;color:#555;min-width:48px;flex-shrink:0}
+.v{color:#000}
+.qr-b{flex-shrink:0;text-align:center}
+.qr-b img{width:20mm;height:20mm}
+.qc{font-size:5.5pt;color:#666;text-align:center;margin-top:0.5mm}
+.foot{border-top:1px solid #ccc;margin-top:1.5mm;padding-top:1mm;font-size:6.5pt;color:#666;display:flex;justify-content:space-between}
+@media print{@page{size:100mm 70mm;margin:0}body{padding:2.5mm}}
+</style></head><body>
+<div class="emp">IMAC — Controle de Estoque</div>
+<div class="layout">
+<div class="info">
+<div class="prod">${d.produto}</div>
+<div class="lote-tag">${d.loteImac}</div>
+<div class="r"><span class="k">Lote forn.</span><span class="v">${d.loteForn}</span></div>
+<div class="r"><span class="k">NF</span><span class="v">${d.nf}</span></div>
+${d.fornecedor?`<div class="r"><span class="k">Fornecedor</span><span class="v">${d.fornecedor}</span></div>`:''}
+<div class="r"><span class="k">Validade</span><span class="v"><b>${d.validade}</b></span></div>
+<div class="r"><span class="k">Qtd.</span><span class="v">${d.quantidade||'—'}</span></div>
+<div class="r"><span class="k">Local</span><span class="v">${d.endereco||'—'}</span></div>
+<div class="r"><span class="k">Entrada</span><span class="v">${d.dataRec}</span></div>
+${d.responsavel?`<div class="r"><span class="k">Operador</span><span class="v">${d.responsavel}</span></div>`:''}
+</div>
+<div class="qr-b">
+${qrSrc?`<img src="${qrSrc}">`:''}
+<div class="qc">IMAC QR<br>${d.loteImac.slice(-6)}</div>
+</div>
+</div>
+<div class="foot"><span>IMAC · Rastreabilidade</span><span>${new Date().toLocaleString('pt-BR')}</span></div>
+<script>window.onload=function(){window.print();setTimeout(function(){window.close()},800)}<\/script>
+</body></html>`;
+
+    const w = window.open('','_blank');
+    if (w) { w.document.write(html); w.document.close(); }
+    else toast('Permita popups no browser', 'error');
+  }, 350);
+}
+
+// ─── Config IP ───────────────────────────────────────────────
+function salvarIP() {
+  pcIP    = document.getElementById('pc-ip').value.trim();
+  pcPorta = document.getElementById('pc-porta').value.trim() || '3099';
+  localStorage.setItem('imac-pc-ip',    pcIP);
+  localStorage.setItem('imac-pc-porta', pcPorta);
+  toast('IP salvo: ' + pcIP + ':' + pcPorta, 'success');
+}
+
+async function testarConexao() {
+  if (!pcIP) { toast('Digite o IP primeiro', 'error'); return; }
+  const el = document.getElementById('ip-status');
+  el.className = 'ip-status';
+  el.textContent = 'Testando...';
+  try {
+    const resp = await fetch(`http://${pcIP}:${pcPorta}/ping`, {
+      signal: AbortSignal.timeout(4000)
+    });
+    if (resp.ok) {
+      el.className = 'ip-status ok';
+      el.textContent = '✓ Conectado! PC encontrado em ' + pcIP;
+    } else { throw new Error(); }
+  } catch {
+    el.className = 'ip-status fail';
+    el.textContent = '✗ Não encontrado em ' + pcIP + ':' + pcPorta + '. Verifique o IP e se o servidor está aberto no PC.';
+  }
+}
+
+// ─── Histórico ───────────────────────────────────────────────
+function renderHistorico() {
+  const hoje  = new Date().toISOString().split('T')[0];
+  const deHoje= historico.filter(h => h.geradoEm?.startsWith(hoje));
+  const el    = document.getElementById('historico-lista');
+  if (!deHoje.length) {
+    el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--gray);font-size:13px">Nenhum recebimento hoje.</div>';
+    return;
+  }
+  el.innerHTML = deHoje.map((h,i) => `
+    <div class="hist-item">
+      <div class="hist-lote">${h.loteImac}</div>
+      <div class="hist-prod">${h.produto}</div>
+      <div class="hist-meta">NF ${h.nf} · Val. ${h.validade} · ${h.endereco||'sem endereço'}</div>
+      <div class="hist-actions">
+        <button class="btn-sm blue" onclick="reimprimirIdx(${i})">↻ Reimprimir</button>
+        <button class="btn-sm" onclick="copiarLote('${h.loteImac}')">Copiar lote</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function reimprimirIdx(i) {
+  dadosAtuais = historico[i];
+  imprimirDireto();
+}
+function copiarLote(lote) {
+  navigator.clipboard?.writeText(lote).then(() => toast('Copiado: ' + lote, 'success'));
+}
+
+// ─── Novo recebimento ────────────────────────────────────────
+function novoRecebimento() {
+  ['produto','fornecedor','nf','lote-forn','validade','quantidade','endereco','responsavel','obs'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('data-rec').value = new Date().toISOString().split('T')[0];
+  codigoAtual = '';
+  dadosAtuais = null;
+  document.getElementById('scan-result').style.display = 'none';
+  document.getElementById('btn-ir-form').disabled = true;
+  document.getElementById('codigo-exibido').style.display = 'none';
+  document.getElementById('qrcode').innerHTML = '';
+  showTab('scan');
+}
+
+// ─── Helpers ─────────────────────────────────────────────────
+function v(id){ return (document.getElementById(id)?.value||'').trim(); }
+function st(id,txt){ const el=document.getElementById(id); if(el) el.textContent=txt; }
+function fmtD(iso){
+  if(!iso) return '—';
+  const [y,m,d]=iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+function toast(msg, tipo='success'){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='show '+tipo;
+  clearTimeout(window._toastT);
+  window._toastT=setTimeout(()=>{ el.className=''; }, 3200);
+}
+</script>
+</body>
+</html>
