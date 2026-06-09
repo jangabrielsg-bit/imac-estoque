@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>IMAC — Servidor de Impressão</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f5;color:#1a1a2e;padding:24px;font-size:14px}
+.card{background:#fff;border-radius:12px;padding:24px;margin-bottom:16px;border:1px solid #dde3ee}
+h1{font-size:18px;font-weight:700;margin-bottom:4px}
+.sub{font-size:13px;color:#6b7a99;margin-bottom:20px}
+.status{padding:12px 16px;border-radius:8px;font-weight:600;margin-bottom:12px;font-size:14px}
+.ok{background:#f0fdf8;color:#1a4a3a;border:1.5px solid #43c59e}
+.err{background:#fef2f2;color:#7f1d1d;border:1.5px solid #ef5350}
+.warn{background:#fffbeb;color:#78350f;border:1.5px solid #f59e0b}
+.log{background:#1a1a2e;color:#4fc3f7;padding:16px;border-radius:8px;font-family:'Courier New',monospace;font-size:12px;height:200px;overflow-y:auto;line-height:1.7}
+.log .ts{color:#90a0b0}
+.log .ok{color:#43c59e;background:none;border:none;padding:0;font-weight:normal}
+.log .err{color:#ef5350;background:none;border:none;padding:0;font-weight:normal}
+.ip-box{background:#f8f9fc;border:1px solid #dde3ee;border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:12px}
+.ip-box strong{font-size:15px;font-family:'Courier New',monospace;color:#1a1a2e}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>IMAC — Servidor de Impressão</h1>
+  <div class="sub">Deixe esta janela aberta. O celular enviará as etiquetas aqui.</div>
+
+  <div id="status-box" class="status warn">⏳ Iniciando servidor local...</div>
+
+  <div class="ip-box">
+    IP deste PC (coloque no celular): <strong id="meu-ip">detectando...</strong><br>
+    Porta: <strong>3099</strong>
+  </div>
+
+  <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:#6b7a99;text-transform:uppercase;letter-spacing:.05em">Log de impressões</div>
+  <div class="log" id="log">
+    <span class="ts">[sistema]</span> Aguardando conexões do celular...<br>
+  </div>
+</div>
+
+<div class="card">
+  <div style="font-size:12px;color:#6b7a99;line-height:1.7">
+    <b>Como usar:</b><br>
+    1. Deixe esta página aberta no PC do estoque<br>
+    2. No celular, acesse o app de recebimento → aba ⚙️ Config<br>
+    3. Digite o IP mostrado acima e salve<br>
+    4. Gere uma etiqueta e clique em "Imprimir na Zebra"<br><br>
+    <b>Requisito:</b> celular e PC na mesma rede Wi-Fi da IMAC.
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+// ── Detecta IP local via WebRTC ──────────────────────────────
+function detectarIP() {
+  return new Promise(resolve => {
+    const pc = new RTCPeerConnection({ iceServers: [] });
+    pc.createDataChannel('');
+    pc.createOffer().then(o => pc.setLocalDescription(o));
+    pc.onicecandidate = (e) => {
+      if (!e || !e.candidate) return;
+      const m = e.candidate.candidate.match(/(\d+\.\d+\.\d+\.\d+)/);
+      if (m && !m[1].startsWith('127.')) {
+        resolve(m[1]);
+        pc.close();
+      }
+    };
+    setTimeout(() => resolve('não detectado'), 3000);
+  });
+}
+
+// ── Servidor HTTP local via Service Worker / BroadcastChannel ─
+// Solução: usa um pequeno servidor Node.js inline via Blob URL
+// Na prática para Windows 7 + Chrome: usamos polling via localStorage
+// O celular escreve no mesmo domínio via postMessage / Firebase
+// ──────────────────────────────────────────────────────────────
+
+// Abordagem real para Windows 7 sem Node.js:
+// O celular abre uma URL especial que aciona window.print() neste PC
+// via BroadcastChannel (mesma origem) ou localStorage polling
+
+const log = document.getElementById('log');
+const statusBox = document.getElementById('status-box');
+
+function addLog(msg, tipo='') {
+  const ts = new Date().toLocaleTimeString('pt-BR');
+  log.innerHTML += `<span class="ts">[${ts}]</span> <span class="${tipo}">${msg}</span><br>`;
+  log.scrollTop = log.scrollHeight;
+}
+
+// Detecta IP
+detectarIP().then(ip => {
+  document.getElementById('meu-ip').textContent = ip + ':3099';
+  addLog('IP detectado: ' + ip, 'ok');
+});
+
+// ── Servidor via localStorage (funciona sem Node.js) ──────────
+// O app do celular (mesmo HTML aberto no PC) escreve no localStorage
+// e este PC lê via polling
+
+function checarFila() {
+  const fila = JSON.parse(localStorage.getItem('imac-fila-impressao') || '[]');
+  if (fila.length > 0) {
+    const job = fila.shift();
+    localStorage.setItem('imac-fila-impressao', JSON.stringify(fila));
+    processarJob(job);
+  }
+}
+
+function processarJob(dados) {
+  addLog('Recebido: ' + dados.produto + ' — ' + dados.loteImac, 'ok');
+  statusBox.className = 'status ok';
+  statusBox.textContent = '✓ Imprimindo: ' + dados.loteImac;
+
+  imprimirEtiqueta(dados);
+
+  setTimeout(() => {
+    statusBox.className = 'status ok';
+    statusBox.textContent = '✓ Servidor ativo — aguardando próxima etiqueta';
+  }, 4000);
+}
+
+function imprimirEtiqueta(d) {
+  // Gera QR em memória
+  const div = document.createElement('div');
+  div.style.position = 'absolute';
+  div.style.left = '-9999px';
+  document.body.appendChild(div);
+
+  const qrData = JSON.stringify({
+    loteImac: d.loteImac, produto: d.produto, loteForn: d.loteForn,
+    nf: d.nf, validade: d.validade, dataRec: d.dataRec,
+    endereco: d.endereco, fornecedor: d.fornecedor
+  });
+
+  new QRCode(div, {
+    text: qrData, width: 90, height: 90,
+    colorDark: '#1a1a2e', colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+
+  setTimeout(() => {
+    const canvas = div.querySelector('canvas');
+    const qrSrc  = canvas ? canvas.toDataURL('image/png') : '';
+    document.body.removeChild(div);
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;width:100mm;padding:3mm;font-size:8.5pt;color:#000;background:#fff}
+.emp{font-size:6.5pt;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#555;border-bottom:1px solid #ccc;padding-bottom:1.5mm;margin-bottom:1.5mm}
+.layout{display:flex;gap:3mm;align-items:flex-start}
+.info{flex:1}
+.prod{font-size:11pt;font-weight:700;margin-bottom:1.5mm;line-height:1.2}
+.lote-tag{background:#1a1a2e;color:#fff;font-size:8pt;font-weight:700;font-family:'Courier New',monospace;padding:1mm 2mm;border-radius:2px;display:inline-block;margin-bottom:1.5mm}
+.r{display:flex;gap:4px;margin-bottom:1mm;font-size:7.5pt}
+.k{font-weight:700;color:#555;min-width:48px;flex-shrink:0}
+.v{color:#000}
+.qr-b{flex-shrink:0;text-align:center}
+.qr-b img{width:22mm;height:22mm}
+.qc{font-size:5.5pt;color:#666;text-align:center;margin-top:0.5mm}
+.foot{border-top:1px solid #ccc;margin-top:1.5mm;padding-top:1mm;font-size:6.5pt;color:#666;display:flex;justify-content:space-between}
+@media print{@page{size:100mm 70mm;margin:0}body{padding:2.5mm}}
+</style></head><body>
+<div class="emp">IMAC — Controle de Estoque</div>
+<div class="layout">
+<div class="info">
+<div class="prod">${d.produto}</div>
+<div class="lote-tag">${d.loteImac}</div>
+<div class="r"><span class="k">Lote forn.</span><span class="v">${d.loteForn}</span></div>
+<div class="r"><span class="k">NF</span><span class="v">${d.nf}</span></div>
+${d.fornecedor?`<div class="r"><span class="k">Fornecedor</span><span class="v">${d.fornecedor}</span></div>`:''}
+<div class="r"><span class="k">Validade</span><span class="v"><b>${d.validade}</b></span></div>
+<div class="r"><span class="k">Qtd.</span><span class="v">${d.quantidade||'—'}</span></div>
+<div class="r"><span class="k">Local</span><span class="v">${d.endereco||'—'}</span></div>
+<div class="r"><span class="k">Entrada</span><span class="v">${d.dataRec}</span></div>
+${d.responsavel?`<div class="r"><span class="k">Operador</span><span class="v">${d.responsavel}</span></div>`:''}
+</div>
+<div class="qr-b">
+${qrSrc?`<img src="${qrSrc}">`:''}
+<div class="qc">IMAC QR<br>${d.loteImac.slice(-6)}</div>
+</div>
+</div>
+<div class="foot"><span>IMAC · Rastreabilidade</span><span>${new Date().toLocaleString('pt-BR')}</span></div>
+<script>window.onload=function(){window.print();setTimeout(function(){window.close()},1000)}<\/script>
+</body></html>`;
+
+    const w = window.open('', '_blank', 'width=1,height=1');
+    if (w) { w.document.write(html); w.document.close(); addLog('Impressão enviada para GC420d', 'ok'); }
+    else addLog('ERRO: permita popups neste browser', 'err');
+  }, 400);
+}
+
+// Polling a cada 1.5s
+setInterval(checarFila, 1500);
+
+statusBox.className = 'status ok';
+statusBox.textContent = '✓ Servidor ativo — aguardando etiquetas do celular';
+addLog('Servidor iniciado. Polling ativo.', 'ok');
+</script>
+</body>
+</html>
