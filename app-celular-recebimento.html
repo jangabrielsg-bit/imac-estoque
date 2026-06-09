@@ -688,58 +688,112 @@ function imprimirDireto() {
   if (qtd > 1) toast(`Abrindo ${qtd} etiquetas...`, 'success');
 }
 
+
+function _gerarHtmlEtiqueta(d, tipo, qrSrc) {
+  var topBg    = tipo==='recebimento' ? '#1a1a2e' : '#0a3d2b';
+  var tipoBadge= tipo==='recebimento' ? 'Recebimento \u00b7 Estoque' : 'Sala de Pesagem \u00b7 Kit';
+  var loteLabel= tipo==='recebimento' ? 'Lote IMAC' : 'Kit IMAC';
+  var loteVal  = tipo==='recebimento' ? (d.loteImac||'\u2014') : (d.kit||d.loteImac||'\u2014');
+  var loteSecL = tipo==='recebimento' ? 'Lote fornecedor' : 'Lote insumo';
+  var loteSecV = tipo==='recebimento' ? (d.loteForn||'\u2014') : (d.lote||d.loteForn||'\u2014');
+  var nomeInsumo = tipo==='recebimento' ? (d.produto||'\u2014') : (d.insumo||d.produto||'\u2014');
+  var prodDesc = tipo==='recebimento'
+    ? 'Insumo \u00b7 Controle de Estoque'
+    : 'OP: '+(d.op||'\u2014')+' \u00b7 Kit '+(d.kitNum||'\u2014')+' / '+(d.kits||'\u2014');
+  var operador = d.operador||d.responsavel||'\u2014';
+  var cs='padding:3px 7px;border-right:1px solid #e8e8e8;border-bottom:1px solid #e8e8e8';
+  var cl='font-size:5.5px;text-transform:uppercase;letter-spacing:.05em;color:#888;font-weight:700;display:block';
+  var cv='font-size:8px;font-weight:700;color:#1a1a2e;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block';
+  var campos='';
+  if(tipo==='recebimento'){
+    campos=
+      '<div style="'+cs+'"><span style="'+cl+'">Validade</span><span style="'+cv+';color:#065f46;font-size:10px">'+(d.validade||'\u2014')+'</span></div>'+
+      '<div style="'+cs+';border-right:none"><span style="'+cl+'">Data entrada</span><span style="'+cv+'">'+(d.dataRec||'\u2014')+'</span></div>'+
+      '<div style="'+cs+'"><span style="'+cl+'">Nota Fiscal</span><span style="'+cv+'">NF '+(d.nf||'\u2014')+'</span></div>'+
+      '<div style="'+cs+';border-right:none"><span style="'+cl+'">Fornecedor</span><span style="'+cv+'">'+(d.fornecedor||'\u2014').toString().slice(0,14)+'</span></div>'+
+      '<div style="'+cs+';border-bottom:none"><span style="'+cl+'">Quantidade</span><span style="'+cv+'">'+(d.quantidade||'\u2014')+'</span></div>'+
+      '<div style="'+cs+';border-bottom:none;border-right:none"><span style="'+cl+'">Endere\u00e7o</span><span style="'+cv+'">'+(d.endereco||'\u2014')+'</span></div>';
+  } else {
+    var ok=Math.abs(parseFloat(d.desvio||0))<=1;
+    campos=
+      '<div style="'+cs+'"><span style="'+cl+'">Peso alvo</span><span style="'+cv+';font-size:10px">'+(d.pesoAlvo||'\u2014')+' g</span></div>'+
+      '<div style="'+cs+';border-right:none"><span style="'+cl+'">Peso real</span><span style="'+cv+';font-size:10px;color:#065f46">'+(d.pesoReal||'\u2014')+' g</span></div>'+
+      '<div style="'+cs+'"><span style="'+cl+'">Desvio</span><span style="'+cv+';color:'+(ok?'#065f46':'#92400e')+'">'+(d.desvio||'\u2014')+'%</span></div>'+
+      '<div style="'+cs+';border-right:none"><span style="'+cl+'">Toler\u00e2ncia</span><span style="'+cv+'">\u00b1 1,0 %</span></div>'+
+      '<div style="'+cs+';border-bottom:none"><span style="'+cl+'">Operador</span><span style="'+cv+'">'+(d.operador||'\u2014')+'</span></div>'+
+      '<div style="'+cs+';border-bottom:none;border-right:none"><span style="'+cl+'">OP</span><span style="'+cv+'">'+(d.op||'\u2014')+'</span></div>';
+  }
+  var footerRight=tipo==='recebimento'
+    ? '<span style="font-size:5.5px;color:#888">'+(d.dataRec||'')+'</span>'
+    : '<span style="font-size:6px;font-weight:700;color:#065f46;background:#d1fae5;padding:1.5px 5px;border-radius:2px">&#10003; OK</span>';
+  var barcodeAI=tipo==='recebimento'
+    ? '(01) GTIN  (10) LOTE  (17) VAL'
+    : '(10) KIT  (3103) PESO  (17) VAL';
+  var padrao=[3,1,2,1,1,2,2,1,1,3,1,1,2,1,3,1,1,1,2,2,1,1,1,2,1,3,2,1,1,2,
+              1,1,2,1,2,2,1,1,3,1,2,1,1,1,1,3,2,1,1,2,1,1,1,3,1,2,1,2,1,1,
+              2,2,1,1,1,2,1,1,3,2,1,1,1,2,2,1,1,2,2,1,1,2,1,2,1,2,1,1,3,1];
+  var bcHtml='';
+  padrao.forEach(function(w,i){
+    var isBar=i%2===0;
+    var h=(i%7===0||i%11===0)?'100%':'82%';
+    var px=(w*1.6)+'px';
+    bcHtml+=isBar
+      ? '<div style="width:'+px+';height:'+h+';background:#1a1a2e;display:inline-block;flex-shrink:0"></div>'
+      : '<div style="width:'+px+';background:#fff;display:inline-block;flex-shrink:0"></div>';
+  });
+  var qrImg=qrSrc?'<img src="'+qrSrc+'" style="width:58px;height:58px">':'';
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8">'+
+    '<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;background:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh}'+
+    '@media print{@page{size:72mm 72mm;margin:0}body{display:block;min-height:auto}}</style></head><body>'+
+    '<div style="width:272px;height:272px;background:#fff;border:1px solid #111;font-family:Arial,Helvetica,sans-serif;display:flex;flex-direction:column;overflow:hidden">'+
+      '<div style="background:'+topBg+';color:#fff;display:flex;align-items:center;justify-content:space-between;padding:3px 7px;flex-shrink:0">'+
+        '<span style="font-size:7.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase">IMAC Ind\u00fastria</span>'+
+        '<span style="font-size:6px;font-weight:700;text-transform:uppercase;background:rgba(255,255,255,.15);padding:1.5px 5px;border-radius:2px">'+tipoBadge+'</span>'+
+      '</div>'+
+      '<div style="border-bottom:1px solid #111;padding:5px 7px 4px;flex-shrink:0">'+
+        '<div style="font-size:13px;font-weight:700;color:#1a1a2e;line-height:1.2;text-transform:uppercase;letter-spacing:.02em">'+nomeInsumo+'</div>'+
+        '<div style="font-size:6.5px;color:#555;margin-top:1px">'+prodDesc+'</div>'+
+      '</div>'+
+      '<div style="background:#f0f0f0;border-bottom:1px solid #ccc;padding:3px 7px;display:flex;align-items:center;gap:8px;flex-shrink:0">'+
+        '<div style="font-size:6px;font-weight:700;color:#555;text-transform:uppercase;min-width:28px">'+loteLabel+'</div>'+
+        '<div style="font-size:10.5px;font-weight:700;font-family:Courier New,monospace;color:#1a1a2e;flex:1">'+loteVal+'</div>'+
+        '<div style="display:flex;flex-direction:column;align-items:flex-end">'+
+          '<div style="font-size:5.5px;color:#888;text-transform:uppercase">'+loteSecL+'</div>'+
+          '<div style="font-size:7px;font-weight:600;font-family:Courier New,monospace;color:#555">'+loteSecV+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #ddd;flex-shrink:0">'+campos+'</div>'+
+      '<div style="display:flex;flex:1;min-height:0;border-bottom:1px solid #ddd">'+
+        '<div style="width:70px;border-right:1px solid #ddd;padding:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;flex-shrink:0">'+
+          qrImg+
+          '<div style="font-size:5px;color:#888;text-align:center;text-transform:uppercase">Scan / QR</div>'+
+        '</div>'+
+        '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px 5px;gap:2px">'+
+          '<div style="font-size:5px;color:#888">'+barcodeAI+'</div>'+
+          '<div style="display:flex;gap:0;height:36px;align-items:flex-end;width:100%">'+bcHtml+'</div>'+
+          '<div style="font-size:5.5px;font-family:Courier New,monospace;color:#333;letter-spacing:.04em">'+loteVal+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="background:#f8f8f8;border-top:1px solid #ddd;padding:2.5px 7px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">'+
+        '<div style="font-size:5.5px;color:#888">Op: '+operador+' \u00b7 IMAC Rastreabilidade</div>'+
+        footerRight+
+      '</div>'+
+    '</div>'+
+    '<scr'+'ipt>window.onload=function(){window.print();setTimeout(function(){window.close()},900)}<\/scr'+'ipt>'+
+    '</body></html>';
+}
+
 function _imprimirUma() {
   if (!dadosAtuais) return;
-  setTimeout(() => {
-    const qrEl  = document.getElementById('qrcode');
-    const canvas= qrEl.querySelector('canvas');
-    const qrSrc = canvas ? canvas.toDataURL('image/png') : '';
-    const d = dadosAtuais;
-
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Arial,sans-serif;width:100mm;padding:3mm;font-size:8.5pt;color:#000;background:#fff}
-.emp{font-size:6.5pt;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#555;border-bottom:1px solid #ccc;padding-bottom:1.5mm;margin-bottom:1.5mm}
-.layout{display:flex;gap:3mm;align-items:flex-start}
-.info{flex:1}
-.prod{font-size:11pt;font-weight:700;margin-bottom:1.5mm;line-height:1.2}
-.lote-tag{background:#1a1a2e;color:#fff;font-size:8pt;font-weight:700;font-family:'Courier New',monospace;padding:1mm 2mm;border-radius:2px;display:inline-block;margin-bottom:1.5mm}
-.r{display:flex;gap:4px;margin-bottom:1mm;font-size:7.5pt}
-.k{font-weight:700;color:#555;min-width:48px;flex-shrink:0}
-.v{color:#000}
-.qr-b{flex-shrink:0;text-align:center}
-.qr-b img{width:20mm;height:20mm}
-.qc{font-size:5.5pt;color:#666;text-align:center;margin-top:0.5mm}
-.foot{border-top:1px solid #ccc;margin-top:1.5mm;padding-top:1mm;font-size:6.5pt;color:#666;display:flex;justify-content:space-between}
-@media print{@page{size:100mm 70mm;margin:0}body{padding:2.5mm}}
-</style></head><body>
-<div class="emp">IMAC — Controle de Estoque</div>
-<div class="layout">
-<div class="info">
-<div class="prod">${d.produto}</div>
-<div class="lote-tag">${d.loteImac}</div>
-<div class="r"><span class="k">Lote forn.</span><span class="v">${d.loteForn}</span></div>
-<div class="r"><span class="k">NF</span><span class="v">${d.nf}</span></div>
-${d.fornecedor?`<div class="r"><span class="k">Fornecedor</span><span class="v">${d.fornecedor}</span></div>`:''}
-<div class="r"><span class="k">Validade</span><span class="v"><b>${d.validade}</b></span></div>
-<div class="r"><span class="k">Qtd.</span><span class="v">${d.quantidade||'—'}</span></div>
-<div class="r"><span class="k">Local</span><span class="v">${d.endereco||'—'}</span></div>
-<div class="r"><span class="k">Entrada</span><span class="v">${d.dataRec}</span></div>
-${d.responsavel?`<div class="r"><span class="k">Operador</span><span class="v">${d.responsavel}</span></div>`:''}
-</div>
-<div class="qr-b">
-${qrSrc?`<img src="${qrSrc}">`:''}
-<div class="qc">IMAC QR<br>${d.loteImac.slice(-6)}</div>
-</div>
-</div>
-<div class="foot"><span>IMAC · Rastreabilidade</span><span>${new Date().toLocaleString('pt-BR')}</span></div>
-<script>window.onload=function(){window.print();setTimeout(function(){window.close()},800)}<\/script>
-</body></html>`;
-
-    const w = window.open('','_blank');
-    if (w) { w.document.write(html); w.document.close(); }
-    else toast('Permita popups no browser', 'error');
+  var d = dadosAtuais;
+  setTimeout(function() {
+    var qrEl  = document.getElementById('qrcode');
+    var canvas= qrEl ? qrEl.querySelector('canvas') : null;
+    var qrSrc = canvas ? canvas.toDataURL('image/png') : '';
+    var html  = _gerarHtmlEtiqueta(d, 'recebimento', qrSrc);
+    var w = window.open('','_blank');
+    if(w){w.document.write(html);w.document.close();}
+    else toast('Permita popups no browser','error');
   }, 350);
 }
 
