@@ -89,12 +89,16 @@ try {
   database.ref('imac-fila-impressao').on('child_added', (snapshot) => {
     const job = snapshot.val();
     const jobId = snapshot.key;
+    if (!job) return;
 
-    if (job) {
-      processarJob(job);
-      // Remove da nuvem para não acumular nem duplicar
-      database.ref('imac-fila-impressao/' + jobId).remove();
-    }
+    // Transaction: garante que somente UMA instância do servidor processa cada job,
+    // eliminando etiquetas duplicadas quando há mais de uma aba aberta.
+    database.ref('imac-fila-impressao/' + jobId).transaction(
+      (current) => (current === null ? undefined : null),
+      (error, committed) => {
+        if (!error && committed) processarJob(job);
+      }
+    );
   });
 
 } catch (error) {
@@ -258,35 +262,32 @@ body {
   <span>Entrada: ${fmtD(d.dataRec)}  ·  Impresso: ${dataHoje}</span>
 </div>
 
-<script>
-  // Aguarda DOM pronto e imprime
-  (function() {
-    function doprint() {
-      // Força o layout a 90x50mm antes de imprimir
-      document.documentElement.style.width  = '90mm';
-      document.documentElement.style.height = '50mm';
-      document.body.style.width  = '90mm';
-      document.body.style.height = '50mm';
-      window.print();
-    }
-    if (document.readyState === 'complete') { setTimeout(doprint, 200); }
-    else { window.onload = function() { setTimeout(doprint, 200); }; }
-  })();
-<\/script>
 </body></html>`;
 
-  // Blob URL: abre direto no conteúdo, sem página em branco inicial
-  const blob    = new Blob([html], { type: 'text/html; charset=utf-8' });
-  const blobUrl = URL.createObjectURL(blob);
-  const w       = window.open(blobUrl, '_blank', 'width=10,height=10,left=-500,top=-500');
+  // Impressão via iframe oculto — sem popup, sem diálogo (compatível com --kiosk-printing)
+  const old = document.getElementById('frame-impressao');
+  if (old) old.remove();
 
-  if (!w) {
-    addLog('ERRO: Pop-ups bloqueados. Acesse chrome://settings/content/popups e adicione localhost.', 'err');
-    URL.revokeObjectURL(blobUrl);
-    return;
-  }
+  const iframe = document.createElement('iframe');
+  iframe.id = 'frame-impressao';
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:90mm;height:50mm;border:none';
+  document.body.appendChild(iframe);
 
-  setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+  const iDoc = iframe.contentWindow.document;
+  iDoc.open();
+  iDoc.write(html);
+  iDoc.close();
+
+  setTimeout(() => {
+    iDoc.documentElement.style.width  = '90mm';
+    iDoc.documentElement.style.height = '50mm';
+    iDoc.body.style.width  = '90mm';
+    iDoc.body.style.height = '50mm';
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+    addLog('Etiqueta enviada para impressão.', 'ok');
+    setTimeout(() => { if (iframe.parentNode) iframe.remove(); }, 10000);
+  }, 400);
 }
 </script>
 </body>
