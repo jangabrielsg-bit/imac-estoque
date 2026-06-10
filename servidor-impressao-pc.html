@@ -107,73 +107,75 @@ function processarJob(dados) {
 }
 
 function imprimirEtiqueta(d) {
-  // Gera QR em alta resolução (200px) para boa nitidez na impressão térmica
+  // Gera QR em alta resolução (200px) para melhor qualidade na impressão térmica
   const div = document.createElement('div');
   div.style.cssText = 'position:fixed;top:-9999px;left:-9999px;visibility:hidden';
   document.body.appendChild(div);
 
-  const qrData = [d.loteImac, d.produto.slice(0,20), d.loteForn, d.validade].join('|');
+  const qrData = [d.loteImac, (d.produto||'').slice(0,20), d.loteForn, d.validade].join('|');
 
   new QRCode(div, {
-    text: qrData,
-    width: 200,
-    height: 200,
-    colorDark: '#000000',
-    colorLight: '#ffffff',
+    text: qrData || 'IMAC',
+    width: 200, height: 200,
+    colorDark: '#000000', colorLight: '#ffffff',
     correctLevel: QRCode.CorrectLevel.M
   });
 
-  // 600ms para garantir que o QR renderizou completamente no canvas
+  // 600ms garante que o canvas do QR renderizou completamente
   setTimeout(() => {
     const canvas = div.querySelector('canvas');
     const qrSrc  = canvas ? canvas.toDataURL('image/png', 1.0) : '';
     document.body.removeChild(div);
 
-    // ── HTML da etiqueta ────────────────────────────────────────────────
-    // Correções: @page fora do @media print | flexbox sem position:absolute |
-    //            overflow:hidden em html E body | html/body fixados em 72x72mm
+    // ── HTML da etiqueta ─────────────────────────────────────────────
+    // Correções aplicadas:
+    //  • @page fora do @media print (funciona em todos os browsers)
+    //  • html E body com overflow:hidden e altura fixa em 72mm
+    //  • Layout 100% flexbox (sem position:absolute que extravasa a página)
+    //  • -webkit-print-color-adjust para cores corretas
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
 @page { size: 72mm 72mm; margin: 0; }
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 html {
-    width: 72mm; height: 72mm;
-    overflow: hidden;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+  width: 72mm; height: 72mm;
+  overflow: hidden;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 body {
-    font-family: Arial, Helvetica, sans-serif;
-    width: 72mm; height: 72mm;
-    overflow: hidden;
-    color: #000; background: #fff;
-    display: flex; flex-direction: column;
-    padding: 2.5mm;
-    page-break-after: avoid;
-    break-after: avoid;
+  font-family: Arial, Helvetica, sans-serif;
+  width: 72mm; height: 72mm;
+  overflow: hidden;
+  color: #000; background: #fff;
+  display: flex; flex-direction: column;
+  padding: 2.5mm;
+  page-break-after: avoid;
+  break-after: avoid;
 }
-.emp { font-size: 6.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
-       border-bottom: 1px solid #000; padding-bottom: 1mm; margin-bottom: 1.5mm;
-       display: flex; justify-content: space-between; flex-shrink: 0; }
+.emp { font-size: 6.5pt; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .04em; border-bottom: 1px solid #000; padding-bottom: 1mm;
+  margin-bottom: 1.5mm; display: flex; justify-content: space-between; flex-shrink: 0; }
 .content { display: flex; gap: 2.5mm; flex: 1; min-height: 0; overflow: hidden; }
 .info { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
-.prod { font-size: 10.5pt; font-weight: 700; line-height: 1.15; text-transform: uppercase;
-        word-break: break-word; margin-bottom: 1.2mm; flex-shrink: 0; }
+.prod { font-size: 10.5pt; font-weight: 700; line-height: 1.15;
+  text-transform: uppercase; word-break: break-word;
+  margin-bottom: 1.2mm; flex-shrink: 0; }
 .lote-tag { background: #000; color: #fff; font-size: 7.5pt; font-weight: 700;
-            font-family: 'Courier New', monospace; padding: 0.3mm 1.5mm;
-            border-radius: 1px; display: inline-block; margin-bottom: 1.5mm; flex-shrink: 0; }
+  font-family: 'Courier New', monospace; padding: 0.3mm 1.5mm;
+  border-radius: 1px; display: inline-block; margin-bottom: 1.5mm; flex-shrink: 0; }
 .rows { flex: 1; overflow: hidden; }
 .r { display: flex; margin-bottom: 0.85mm; font-size: 7pt; line-height: 1.25; }
 .k { font-weight: 700; color: #555; width: 48px; flex-shrink: 0; font-size: 6pt; }
 .v { color: #000; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .v.val { font-size: 8.5pt; font-weight: 700; }
 .qr-b { width: 22mm; flex-shrink: 0; display: flex; flex-direction: column;
-         align-items: center; gap: 1mm; padding-top: 0.5mm; }
+  align-items: center; gap: 1mm; padding-top: 0.5mm; }
 .qr-b img { width: 21mm; height: 21mm; display: block; image-rendering: pixelated; }
 .qc { font-size: 5.5pt; text-align: center; font-weight: 700;
-      font-family: 'Courier New', monospace; color: #333; line-height: 1.3; }
+  font-family: 'Courier New', monospace; color: #333; line-height: 1.3; }
 .foot { border-top: 1px solid #000; padding-top: 1mm; margin-top: 1.5mm;
-        font-size: 6.5pt; display: flex; justify-content: space-between; flex-shrink: 0; }
+  font-size: 6.5pt; display: flex; justify-content: space-between; flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -185,16 +187,16 @@ body {
     <div class="rows">
       <div class="r"><span class="k">Lote forn.</span><span class="v">${d.loteForn || '—'}</span></div>
       <div class="r"><span class="k">NF</span><span class="v">${d.nf || '—'}</span></div>
-      ${d.fornecedor ? `<div class="r"><span class="k">Fornecedor</span><span class="v">${d.fornecedor}</span></div>` : ''}
+      ${d.fornecedor ? '<div class="r"><span class="k">Fornecedor</span><span class="v">' + d.fornecedor + '</span></div>' : ''}
       <div class="r"><span class="k">Validade</span><span class="v val">${d.validade || '—'}</span></div>
-      ${d.quantidade ? `<div class="r"><span class="k">Qtd.</span><span class="v">${d.quantidade}</span></div>` : ''}
-      ${d.endereco ? `<div class="r"><span class="k">Local</span><span class="v">${d.endereco}</span></div>` : ''}
+      ${d.quantidade ? '<div class="r"><span class="k">Qtd.</span><span class="v">' + d.quantidade + '</span></div>' : ''}
+      ${d.endereco ? '<div class="r"><span class="k">Local</span><span class="v">' + d.endereco + '</span></div>' : ''}
       <div class="r"><span class="k">Entrada</span><span class="v">${d.dataRec || '—'}</span></div>
-      ${d.responsavel ? `<div class="r"><span class="k">Operador</span><span class="v">${d.responsavel}</span></div>` : ''}
+      ${d.responsavel ? '<div class="r"><span class="k">Operador</span><span class="v">' + d.responsavel + '</span></div>' : ''}
     </div>
   </div>
   <div class="qr-b">
-    ${qrSrc ? `<img src="${qrSrc}" alt="QR">` : ''}
+    ${qrSrc ? '<img src="' + qrSrc + '" alt="QR">' : ''}
     <div class="qc">LOTE IMAC<br>${d.loteImac ? d.loteImac.slice(-6) : '—'}</div>
   </div>
 </div>
@@ -202,34 +204,33 @@ body {
   <span>IMAC · Rastreabilidade</span>
   <span>${new Date().toLocaleDateString('pt-BR')}</span>
 </div>
-<script>setTimeout(function(){ window.print(); }, 300);<\/script>
+<script>
+  // Aguarda a imagem do QR carregar antes de imprimir
+  var img = document.querySelector('img');
+  if (img && !img.complete) {
+    img.onload = function() { setTimeout(function(){ window.print(); }, 200); };
+    img.onerror = function() { setTimeout(function(){ window.print(); }, 200); };
+  } else {
+    setTimeout(function(){ window.print(); }, 300);
+  }
+<\/script>
 </body></html>`;
 
-    // ── Usa iframe oculto em vez de window.open ─────────────────────────
-    // window.open cria uma página em branco inicial → gera 2 páginas na impressão
-    // O iframe resolve isso: não tem página inicial em branco
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:0;opacity:0';
-    document.body.appendChild(iframe);
+    // ── Blob URL: abre direto no conteúdo (sem página em branco inicial) ──
+    // window.open('', '_blank') → cria janela em branco → browser conta como pág 1
+    // URL.createObjectURL(blob) → janela abre JÁ no conteúdo → 1 página apenas
+    const blob    = new Blob([html], { type: 'text/html; charset=utf-8' });
+    const blobUrl = URL.createObjectURL(blob);
 
-    const iDoc = iframe.contentDocument || iframe.contentWindow.document;
-    iDoc.open();
-    iDoc.write(html);
-    iDoc.close();
+    const w = window.open(blobUrl, '_blank', 'width=10,height=10,left=-200,top=-200');
+    if (!w) {
+      addLog('ERRO: Pop-ups bloqueados! Vá em Configurações do Chrome → Sites → Pop-ups e ative.', 'err');
+      URL.revokeObjectURL(blobUrl);
+      return;
+    }
 
-    // 800ms para o iframe + QR renderizarem antes de disparar o print()
-    setTimeout(() => {
-      try {
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-      } catch(e) {
-        addLog('Erro ao imprimir via iframe: ' + e.message, 'err');
-      }
-      // Remove o iframe após o diálogo de impressão fechar (5s de margem)
-      setTimeout(() => {
-        if (document.body.contains(iframe)) document.body.removeChild(iframe);
-      }, 5000);
-    }, 800);
+    // Revoga a URL após 15 segundos (memória)
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
 
   }, 600);
 }
