@@ -13,217 +13,98 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --navy:#1a1a2e;
-  --blue:#4fc3f7;
-  --green:#43c59e;
-  --red:#ef5350;
-  --gray:#6b7a99;
-  --light:#f0f2f5;
-  --border:#dde3ee;
+  --navy:#1a1a2e; --blue:#4fc3f7; --green:#43c59e; --red:#ef5350; --gray:#6b7a99; --light:#f0f2f5; --border:#dde3ee;
 }
-body{
-  font-family:'Segoe UI',Arial,sans-serif;
-  background:var(--light);
-  color:var(--navy);
-  min-height:100vh;
-  font-size:15px;
-}
-header{
-  background:var(--navy);
-  color:#fff;
-  padding:0 16px;
-  height:52px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  position:sticky;top:0;z-index:200;
-  box-shadow:0 2px 8px rgba(0,0,0,0.15);
-}
-header h1{font-size:16px;font-weight:700;letter-spacing:0.5px}
-.tab-nav{
-  display:flex;background:#fff;border-bottom:1px solid var(--border);
-  position:sticky;top:52px;z-index:100;
-}
-.tab-btn{
-  flex:1;text-align:center;padding:14px 0;font-size:13px;font-weight:600;
-  color:var(--gray);border-bottom:3px solid transparent;cursor:pointer;
-  transition:all 0.2s;text-transform:uppercase;letter-spacing:0.5px;
-}
-.tab-btn.active{color:var(--navy);border-bottom-color:var(--navy)}
-.container{padding:16px;max-width:600px;margin:0 auto;padding-bottom:80px}
-.tab-content{display:none}
-.tab-content.active{display:block}
-.card{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 6px rgba(26,26,46,0.04);border:1px solid var(--border)}
-.card-title{font-size:14px;font-weight:700;color:var(--gray);margin-bottom:16px;text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:6px}
-.form-group{margin-bottom:16px}
-label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--navy)}
-input,select,textarea{
-  width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;
-  font-size:15px;font-family:inherit;transition:all 0.2s;color:var(--navy);background:#fff;
-}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy);background:#fff}
-.row{display:flex;gap:12px}
-.row .form-group{flex:1}
-.btn{
-  width:100%;padding:14px;border:none;border-radius:8px;font-size:15px;font-weight:600;
-  cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;
-  gap:8px;text-transform:uppercase;letter-spacing:0.5px;
-}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--light);color:var(--navy);min-height:100vh;font-size:15px}
+header{background:var(--navy);color:#fff;padding:0 16px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+.logo{font-size:17px;font-weight:700;letter-spacing:.03em}
+.logo span{color:var(--blue)}
+.tabs{display:flex;background:#fff;border-bottom:2px solid var(--border);position:sticky;top:52px;z-index:100}
+.tab{flex:1;padding:13px 8px;text-align:center;font-size:13px;font-weight:600;color:var(--gray);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.tab.active{color:var(--navy);border-bottom-color:var(--blue)}
+.screen{display:none;padding:16px}
+.screen.active{display:block}
+.card{background:#fff;border-radius:12px;padding:20px;margin-bottom:14px;border:1px solid var(--border)}
+.card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-title::before{content:'';display:block;width:3px;height:13px;background:var(--blue);border-radius:2px}
+#reader{width:100%;border-radius:10px;overflow:hidden;background:#000;min-height:200px}
+.scan-result{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#f0fdf8;border:1.5px solid var(--green);border-radius:8px;margin-top:10px;font-size:13px;font-weight:600;color:#1a4a3a;font-family:monospace}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+label{font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.05em}
+input,select{border:1.5px solid var(--border);border-radius:8px;padding:11px 14px;font-size:15px;color:var(--navy);background:#fff;width:100%}
+input:focus{outline:none;border-color:var(--blue);background:#f8fdff}
+.btn{border:none;border-radius:10px;padding:14px 20px;font-size:15px;font-weight:600;cursor:pointer;width:100%;display:block;text-align:center}
 .btn-primary{background:var(--navy);color:#fff}
-.btn-primary:active{background:#0f0f1d}
-.btn-success{background:var(--green);color:#fff}
-.btn-success:active{background:#32b28c}
-.btn-secondary{background:#fff;color:var(--navy);border:1.5px solid var(--navy);padding:12px}
-#reader{width:100%;border-radius:12px;overflow:hidden;border:none;background:#000}
-#scan-result{display:none;margin-top:16px}
-.badge{
-  display:inline-block;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:700;
-  background:var(--light);color:var(--navy);margin-bottom:8px;
-}
-.badge-lote{background:var(--navy);color:#fff;font-family:monospace;font-size:14px;padding:6px 10px}
-.hist-item{
-  padding:14px;border-bottom:1px solid var(--border);position:relative;
-  display:flex;justify-content:space-between;align-items:center;
-}
-.hist-item:last-child{border-bottom:none}
-.hist-info h4{font-size:15px;font-weight:600;margin-bottom:4px}
-.hist-info p{font-size:13px;color:var(--gray)}
-.btn-mini{
-  padding:6px 12px;background:var(--light);border:1px solid var(--border);
-  border-radius:6px;font-size:12px;font-weight:600;color:var(--navy);cursor:pointer;
-}
-#qrcode{display:flex;justify-content:center;margin:16px 0;background:#fff;padding:12px;border-radius:8px}
-#codigo-exibido{text-align:center;font-weight:700;font-size:18px;margin-bottom:16px;letter-spacing:1px;display:none}
-.counter-container{display:flex;align-items:center;justify-content:center;gap:16px;margin:16px 0}
-.counter-btn{
-  width:40px;height:40px;border-radius:50%;border:1.5px solid var(--navy);
-  background:#fff;font-size:20px;font-weight:700;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-}
-.counter-val{font-size:20px;font-weight:700;min-width:30px;text-align:center}
+.btn-green{background:var(--green);color:#fff}
+.btn-outline{background:#fff;color:var(--gray);border:1.5px solid var(--border)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:13px 22px;border-radius:10px;font-size:14px;opacity:0;transition:all .25s;z-index:999}
+#toast.show{opacity:1}
 </style>
 </head>
 <body>
 
 <header>
-  <h1>IMAC · Recebimento</h1>
-  <div style="font-size:12px;opacity:0.8;font-weight:600" id="conn-badge">Nuvem: Offline</div>
+  <div class="logo">IMAC <span>·</span> Estoque</div>
+  <div style="font-size:11px;color:#43c59e" id="status-fb">Nuvem ativa</div>
 </header>
 
-<div class="tab-nav">
-  <div class="tab-btn active" onclick="showTab('scan')">Escanear</div>
-  <div class="tab-btn" onclick="showTab('form')">Formulário</div>
-  <div class="tab-btn" onclick="showTab('hist')">Histórico</div>
+<div class="tabs">
+  <div class="tab active" onclick="showTab('scan')">📷 Bipar</div>
+  <div class="tab" onclick="showTab('form')">📝 Dados</div>
+  <div class="tab" onclick="showTab('cfg')">⚙️ Config</div>
 </div>
 
-<div class="container">
-  
-  <div id="tab-scan" class="tab-content active">
-    <div class="card">
-      <div class="card-title">📷 Escanear QR Code do Fornecedor</div>
-      <div id="reader"></div>
-      <button class="btn btn-secondary" style="margin-top:12px" onclick="startScanner()">Ligar Câmera</button>
-      
-      <div id="scan-result">
-        <div class="badge">Detectado</div>
-        <div id="scan-text" style="word-break:break-all;font-size:14px;margin-bottom:12px;background:#f8f9fc;padding:10px;border-radius:6px;border:1px solid var(--border)"></div>
-        <button id="btn-ir-form" class="btn btn-primary" onclick="processarScan()" disabled>Preencher Formulário</button>
-      </div>
-    </div>
+<div class="screen active" id="tab-scan">
+  <div class="card">
+    <div class="card-title">Bipar mercadoria</div>
+    <div id="reader"></div>
+    <div id="scan-result" style="display:none" class="scan-result">✓ <span id="scan-text">—</span></div>
+    <button class="btn btn-primary" style="margin-top:12px" id="btn-iniciar" onclick="iniciarScanner()">Iniciar câmera</button>
   </div>
-
-  <div id="tab-form" class="tab-content">
-    <div class="card">
-      <div class="card-title">📝 Dados da Matéria-Prima / Produto</div>
-      
-      <div class="form-group">
-        <label>Produto / Insumo *</label>
-        <input type="text" id="produto" placeholder="Ex: Farinha de Trigo Especial">
-      </div>
-      
-      <div class="form-group">
-        <label>Fornecedor</label>
-        <input type="text" id="fornecedor" placeholder="Nome do fabricante/fornecedor">
-      </div>
-
-      <div class="row">
-        <div class="form-group">
-          <label>Nota Fiscal (NF) *</label>
-          <input type="text" id="nf" placeholder="000.000">
-        </div>
-        <div class="form-group">
-          <label>Lote Fornecedor *</label>
-          <input type="text" id="lote-forn" placeholder="Lote original">
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="form-group">
-          <label>Data Validade *</label>
-          <input type="date" id="validade">
-        </div>
-        <div class="form-group">
-          <label>Data Recebimento</label>
-          <input type="date" id="data-rec">
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="form-group">
-          <label>Quantidade / Peso</label>
-          <input type="text" id="quantidade" placeholder="Ex: 50 SC, 1000 KG">
-        </div>
-        <div class="form-group">
-          <label>Endereço / Localização *</label>
-          <input type="text" id="endereco" placeholder="Ex: RUA A-3">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>Responsável pelo Recebimento *</label>
-        <input type="text" id="responsavel" placeholder="Seu nome">
-      </div>
-
-      <div class="form-group">
-        <label>Observações</label>
-        <textarea id="obs" rows="2" placeholder="Alguma avaria ou detalhe técnico..."></textarea>
-      </div>
-
-      <button class="btn btn-success" onclick="gerarLoteImac()">Mandar para Impressora Zebra</button>
-    </div>
-
-    <div class="card" id="card-impressao" style="display:none">
-      <div class="card-title">✓ Lote Gerado com Sucesso</div>
-      <div style="text-align:center;margin-bottom:8px;color:var(--gray);font-size:13px">LOTE INTERNO IMAC</div>
-      <div id="codigo-exibido" class="badge-lote" style="display:block;margin:0 auto 16px auto;width:fit-content;border-radius:6px"></div>
-      
-      <div id="qrcode"></div>
-
-      <label style="text-align:center;margin-top:12px">Quantidade de Cópias (Etiquetas)</label>
-      <div class="counter-container">
-        <button class="counter-btn" onclick="alterarCopias(-1)">-</button>
-        <div class="counter-val" id="qtd-etiquetas">1</div>
-        <button class="counter-btn" onclick="alterarCopias(1)">+</button>
-      </div>
-
-      <button class="btn btn-primary" onclick="enviarFilaFirebase()">Confirmar Impressão</button>
-      <button class="btn btn-secondary" style="margin-top:8px;border:none" onclick="novoRecebimento()">Novo Recebimento</button>
-    </div>
-  </div>
-
-  <div id="tab-hist" class="tab-content">
-    <div class="card" style="padding:0;overflow:hidden">
-      <div class="card-title" style="padding:20px 20px 4px 20px;margin-bottom:0">Últimos Recebimentos</div>
-      <div id="lista-historico">
-        <div style="padding:20px;text-align:center;color:var(--gray)">Nenhum item registrado localmente nesta sessão.</div>
-      </div>
-    </div>
-  </div>
-
+  <button class="btn btn-green" onclick="showTab('form')" id="btn-ir-form" disabled>Preencher dados →</button>
 </div>
+
+<div class="screen" id="tab-form">
+  <div class="card">
+    <div class="card-title">Informações do produto</div>
+    <div class="field"><label>Produto / Descrição *</label><input type="text" id="produto"></div>
+    <div class="field"><label>Fornecedor</label><input type="text" id="fornecedor"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Dados do lote e nota</div>
+    <div class="field"><label>Nº da Nota Fiscal *</label><input type="text" id="nf" inputmode="numeric"></div>
+    <div class="field"><label>Lote do fornecedor *</label><input type="text" id="lote-forn"></div>
+    <div class="field"><label>Validade *</label><input type="date" id="validade"></div>
+    <div class="field"><label>Data de recebimento</label><input type="date" id="data-rec"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Estoque</div>
+    <div class="field"><label>Quantidade recebida</label><input type="text" id="quantidade"></div>
+    <div class="field"><label>Endereçamento</label><input type="text" id="endereco"></div>
+    <div class="field"><label>Responsável</label><input type="text" id="responsavel"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Cópias</div>
+    <div class="field"><label>Quantidade de etiquetas</label><input type="number" id="qtd-etiquetas" value="1" min="1"></div>
+  </div>
+  <button class="btn btn-green" onclick="dispararFila()">🖨 Enviar para Impressão</button>
+</div>
+
+<div class="screen" id="tab-cfg">
+  <div class="card">
+    <div class="card-title">Configuração</div>
+    <p style="font-size:13px;color:var(--gray)">O aplicativo está configurado para enviar impressões diretamente via nuvem ao Firebase integrado.</p>
+  </div>
+</div>
+
+<div id="toast"></div>
 
 <script>
-// ── CONFIGURAÇÃO DO FIREBASE DO CELULAR ───────────────────
+let codigoAtual = '';
+let scanner = null;
+let scannerAtivo = false;
+
 const firebaseConfig = {
   apiKey: "AIzaSyCgniZ8fVNdmbzkyfOKGrfXjcKhvX-OIhI",
   authDomain: "etiquetas-84828.firebaseapp.com",
@@ -234,90 +115,53 @@ const firebaseConfig = {
   databaseURL: "https://etiquetas-84828-default-rtdb.firebaseio.com"
 };
 
-// Inicialização segura do Firebase
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// Monitor de Conexão no Header do Celular
-database.ref('.info/connected').on('value', (snap) => {
-  const badge = document.getElementById('conn-badge');
-  if (snap.val() === true) {
-    badge.textContent = "Nuvem: Conectado";
-    badge.style.color = "#43c59e";
-  } else {
-    badge.textContent = "Nuvem: Offline";
-    badge.style.color = "#ef5350";
-  }
-});
-
-let html5QrcodeScanner = null;
-let codigoAtual = '';
-let dadosAtuais = null;
-let historico = [];
-
 document.getElementById('data-rec').value = new Date().toISOString().split('T')[0];
 
-function showTab(tabId) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  
-  event?.target.classList.add('active');
-  document.getElementById('tab-' + tabId).classList.add('active');
-  
-  if(tabId !== 'scan' && html5QrcodeScanner) {
-    try { html5QrcodeScanner.clear(); } catch(e){}
-  }
+function showTab(nome) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', ['scan','form','cfg'][i] === nome);
+  });
+  ['tab-scan','tab-form','tab-cfg'].forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById('tab-' + nome).style.display = 'block';
+  if(nome !== 'scan') pararScanner();
 }
 
-function startScanner() {
-  document.getElementById('scan-result').style.display = 'none';
-  html5QrcodeScanner = new Html5Qrcode("reader");
-  html5QrcodeScanner.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: { width: 250, height: 250 } },
-    (decodedText) => {
-      document.getElementById('scan-text').textContent = decodedText;
-      document.getElementById('scan-result').style.display = 'block';
+function iniciarScanner() {
+  if (scannerAtivo) { pararScanner(); return; }
+  document.getElementById('btn-iniciar').textContent = 'Parar Câmera';
+  scanner = new Html5Qrcode("reader");
+  scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, 
+    txt => {
+      codigoAtual = txt;
+      document.getElementById('scan-result').style.display = 'flex';
+      document.getElementById('scan-text').textContent = txt;
       document.getElementById('btn-ir-form').disabled = false;
-      codigoAtual = decodedText;
-      try { html5QrcodeScanner.stop(); } catch(e){}
-    },
+      pararScanner();
+    }, 
     () => {}
-  ).catch(err => alert("Erro ao abrir câmera: " + err));
+  ).then(() => scannerAtivo = true);
 }
 
-function processarScan() {
-  let txt = codigoAtual;
-  novoRecebimento();
-  codigoAtual = txt;
-  
-  if (txt.includes('*') || txt.includes('|') || txt.includes(';')) {
-    let p = txt.split(/[*\s|;]+/);
-    if(p.length >= 2){
-      document.getElementById('produto').value = p[0];
-      document.getElementById('lote-forn').value = p[1];
-    }
-  } else {
-    document.getElementById('produto').value = txt;
-  }
-  showTab('form');
+function pararScanner() {
+  if (scanner && scannerAtivo) { scanner.stop(); scannerAtivo = false; }
+  document.getElementById('btn-iniciar').textContent = 'Iniciar câmera';
 }
 
-function gerarLoteImac() {
-  if(!v('produto') || !v('nf') || !v('lote-forn') || !v('validade') || !v('endereco') || !v('responsavel')){
-    alert('Por favor, preencha todos os campos obrigatórios (*).');
-    return;
+function v(id){ return (document.getElementById(id).value || '').trim(); }
+
+function dispararFila() {
+  if(!v('produto') || !v('nf') || !v('lote-forn') || !v('validade')){
+    alert('Preencha os campos obrigatórios!'); return;
   }
 
-  const hoje = new Date();
-  const yyyy = hoje.getFullYear();
-  const mm = String(hoje.getMonth() + 1).padStart(2,'0');
-  const dd = String(hoje.getDate()).padStart(2,'0');
-  const sufixo = String(Math.floor(1000 + Math.random() * 9000));
-  const loteGerado = `IMAC-${yyyy}${mm}${dd}-${sufixo}`;
+  const d = new Date();
+  const loteImac = `IMAC-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-  dadosAtuais = {
-    loteImac: loteGerado,
+  const pacote = {
+    loteImac,
     produto: v('produto'),
     fornecedor: v('fornecedor'),
     nf: v('nf'),
@@ -327,113 +171,34 @@ function gerarLoteImac() {
     quantidade: v('quantidade'),
     endereco: v('endereco'),
     responsavel: v('responsavel'),
-    obs: v('obs'),
-    timestamp: new Date().getTime()
+    timestamp: firebase.database.ServerValue.TIMESTAMP
   };
 
-  document.getElementById('codigo-exibido').textContent = loteGerado;
-  document.getElementById('qrcode').innerHTML = '';
+  const qtd = parseInt(document.getElementById('qtd-etiquetas').value) || 1;
   
-  new QRCode(document.getElementById('qrcode'), {
-    text: JSON.stringify(dadosAtuais),
-    width: 160, height: 160
-  });
-
-  document.getElementById('card-impressao').style.display = 'block';
-  document.getElementById('card-impressao').scrollIntoView({ behavior: 'smooth' });
-}
-
-function alterarCopias(val) {
-  let el = document.getElementById('qtd-etiquetas');
-  let n = parseInt(el.textContent) + val;
-  if(n < 1) n = 1;
-  el.textContent = n;
-}
-
-// ENVIO DIRETO PARA A NUVEM (Zebra escuta pelo PC)
-function enviarFilaFirebase() {
-  if(!dadosAtuais) return;
-
-  const copias = parseInt(document.getElementById('qtd-etiquetas').textContent) || 1;
-  
-  // Envia a quantidade de vezes solicitada para a fila
-  let promises = [];
-  for(let i=0; i<copias; i++) {
-    promises.push(database.ref('imac-fila-impressao').push(dadosAtuais));
+  for(let i = 0; i < qtd; i++){
+    database.ref('imac-fila-impressao').push(pacote);
   }
 
-  Promise.all(promises)
-    .then(() => {
-      alert(`Etiqueta enviada para o computador com sucesso! (${copias} cópia(s))`);
-      
-      // Adiciona ao histórico local da aba
-      historico.unshift(dadosAtuais);
-      atualizarHistTela();
-      novoRecebimento();
-    })
-    .catch(err => {
-      alert("Erro ao enviar dados para a nuvem: " + err.message);
-    });
+  toast('Enviado para a Zebra!');
+  limparFormulario();
+  showTab('scan');
 }
 
-function atualizarHistTela() {
-  const h = document.getElementById('lista-historico');
-  if(!historico.length){
-    h.innerHTML = '<div style="padding:20px;text-align:center;color:var(--gray)">Nenhum item registrado.</div>';
-    return;
-  }
-  h.innerHTML = historico.map((item, idx) => `
-    <div class="hist-item">
-      <div class="hist-info">
-        <h4>${item.produto}</h4>
-        <p style="font-family:monospace;font-weight:700;color:var(--navy)">${item.loteImac}</p>
-        <p>NF: ${item.nf} · Val: ${item.validade} · Qtd: ${item.quantidade || '—'}</p>
-      </div>
-      <button class="btn-mini" onclick="reimprimirIdx(${idx})">Reimprimir</button>
-    </div>
-  `).join('');
-}
-
-function reimprimirIdx(i) {
-  dadosAtuais = historico[i];
-  document.getElementById('produto').value = dadosAtuais.produto;
-  document.getElementById('fornecedor').value = dadosAtuais.fornecedor;
-  document.getElementById('nf').value = dadosAtuais.nf;
-  document.getElementById('lote-forn').value = dadosAtuais.loteForn;
-  document.getElementById('quantidade').value = dadosAtuais.quantidade;
-  document.getElementById('endereco').value = dadosAtuais.endereco;
-  document.getElementById('responsavel').value = dadosAtuais.responsavel;
-  document.getElementById('obs').value = dadosAtuais.obs;
-  
-  document.getElementById('codigo-exibido').textContent = dadosAtuais.loteImac;
-  document.getElementById('qrcode').innerHTML = '';
-  new QRCode(document.getElementById('qrcode'), { text: JSON.stringify(dadosAtuais), width: 160, height: 160 });
-  
-  document.getElementById('card-impressao').style.display = 'block';
-  showTab('form');
-  document.getElementById('card-impressao').scrollIntoView({ behavior: 'smooth' });
-}
-
-function novoRecebimento() {
-  ['produto','fornecedor','nf','lote-forn','validade','quantidade','endereco','responsavel','obs'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-  document.getElementById('data-rec').value = new Date().toISOString().split('T')[0];
-  codigoAtual = '';
-  dadosAtuais = null;
-  document.getElementById('scan-result').style.display = 'none';
+function limparFormulario() {
+  ['produto','fornecedor','nf','lote-forn','validade','quantidade','endereco','responsavel'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('btn-ir-form').disabled = true;
-  document.getElementById('card-impressao').style.display = 'none';
-  document.getElementById('qtd-etiquetas').textContent = '1';
+  document.getElementById('scan-result').style.display = 'none';
 }
 
-function v(id){ return (document.getElementById(id)?.value||'').trim(); }
 function fmtD(iso){
-  if(!iso) return '—';
-  if(iso.includes('/')) return iso;
-  const [y,m,d]=iso.split('-');
-  return `${d}/${m}/${y}`;
+  if(!iso || iso.includes('/')) return iso || '—';
+  const [y,m,d] = iso.split('-'); return `${d}/${m}/${y}`;
+}
+
+function toast(msg){
+  const el = document.getElementById('toast'); el.textContent = msg; el.className = 'show';
+  setTimeout(() => el.className = '', 2500);
 }
 </script>
 </body>
