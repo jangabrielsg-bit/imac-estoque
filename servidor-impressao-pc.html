@@ -43,16 +43,6 @@ h1{font-size:18px;font-weight:700;margin-bottom:4px}
   </div>
 </div>
 
-<div class="card">
-  <div style="font-size:12px;color:#6b7a99;line-height:1.7">
-    <b>Como usar com o Firebase:</b><br>
-    1. Deixe esta página aberta no PC do estoque (conectado ao cabo).<br>
-    2. No app do celular (Wi-Fi), realize o recebimento normalmente.<br>
-    3. Assim que confirmar no celular, o PC abrirá a janela de impressão da Zebra automaticamente.<br><br>
-    <b>Nota:</b> Certifique-se de permitir os <b>Pop-ups</b> deste endereço no navegador do PC.
-  </div>
-</div>
-
 <script>
 const log = document.getElementById('log');
 const statusBox = document.getElementById('status-box');
@@ -64,7 +54,6 @@ function addLog(msg, tipo='') {
   log.scrollTop = log.scrollHeight;
 }
 
-// ── Configuração do Firebase da IMAC ─────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyCgniZ8fVNdmbzkyfOKGrfXjcKhvX-OIhI",
   authDomain: "etiquetas-84828.firebaseapp.com",
@@ -75,7 +64,6 @@ const firebaseConfig = {
   databaseURL: "https://etiquetas-84828-default-rtdb.firebaseio.com"
 };
 
-// Inicializa o Firebase e escuta conexões
 try {
   firebase.initializeApp(firebaseConfig);
   const database = firebase.database();
@@ -90,19 +78,15 @@ try {
     } else {
       fbStatusSpan.textContent = "Desconectado";
       fbStatusSpan.style.color = "#ef5350";
-      statusBox.className = 'status err';
-      statusBox.textContent = '❌ Desconectado do Firebase. Verifique sua internet ou regras do banco.';
     }
   });
 
-  // Ouvinte em tempo real para a fila de impressão
   database.ref('imac-fila-impressao').on('child_added', (snapshot) => {
     const job = snapshot.val();
     const jobId = snapshot.key;
 
     if (job) {
       processarJob(job);
-      // Remove o registro processado para não acumular nem duplicar impressões
       database.ref('imac-fila-impressao/' + jobId).remove();
     }
   });
@@ -113,15 +97,7 @@ try {
 
 function processarJob(dados) {
   addLog('Recebido da nuvem: ' + (dados.produto || 'Item') + ' — ' + (dados.loteImac || ''), 'ok');
-  statusBox.className = 'status warn';
-  statusBox.textContent = '⏳ Processando etiqueta: ' + (dados.loteImac || '');
-
   imprimirEtiqueta(dados);
-
-  setTimeout(() => {
-    statusBox.className = 'status ok';
-    statusBox.textContent = '✓ Servidor ativo — Aguardando comandos do celular';
-  }, 3000);
 }
 
 function imprimirEtiqueta(d) {
@@ -137,8 +113,8 @@ function imprimirEtiqueta(d) {
   });
 
   new QRCode(div, {
-    text: qrData, width: 90, height: 90,
-    colorDark: '#1a1a2e', colorLight: '#ffffff',
+    text: qrData, width: 75, height: 75,
+    colorDark: '#000000', colorLight: '#ffffff',
     correctLevel: QRCode.CorrectLevel.M
   });
 
@@ -147,23 +123,24 @@ function imprimirEtiqueta(d) {
     const qrSrc  = canvas ? canvas.toDataURL('image/png') : '';
     document.body.removeChild(div);
 
+    // Ajuste estrutural do HTML para evitar vazamento de página
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Arial,sans-serif;width:100mm;padding:3mm;font-size:8.5pt;color:#000;background:#fff}
-.emp{font-size:6.5pt;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#555;border-bottom:1px solid #ccc;padding-bottom:1.5mm;margin-bottom:1.5mm}
-.layout{display:flex;gap:3mm;align-items:flex-start}
-.info{flex:1}
-.prod{font-size:11pt;font-weight:700;margin-bottom:1.5mm;line-height:1.2}
-.lote-tag{background:#1a1a2e;color:#fff;font-size:8pt;font-weight:700;font-family:'Courier New',monospace;padding:1mm 2mm;border-radius:2px;display:inline-block;margin-bottom:1.5mm}
-.r{display:flex;gap:4px;margin-bottom:1mm;font-size:7.5pt}
-.k{font-weight:700;color:#555;min-width:48px;flex-shrink:0}
-.v{color:#000}
-.qr-b{flex-shrink:0;text-align:center}
-.qr-b img{width:22mm;height:22mm}
-.qc{font-size:5.5pt;color:#666;text-align:center;margin-top:0.5mm}
-.foot{border-top:1px solid #ccc;margin-top:1.5mm;padding-top:1mm;font-size:6.5pt;color:#666;display:flex;justify-content:space-between}
-@media print{@page{size:100mm 70mm;margin:0}body{padding:2.5mm}}
+body{font-family:Arial,sans-serif;width:72mm;height:72mm;padding:2mm;color:#000;background:#fff;overflow:hidden}
+.emp{font-size:7pt;font-weight:700;text-transform:uppercase;border-bottom:1px solid #000;padding-bottom:1mm;margin-bottom:1.5mm}
+.layout{display:flex;gap:2mm;align-items:flex-start}
+.info{flex:1;min-width:0}
+.prod{font-size:12pt;font-weight:700;margin-bottom:1mm;line-height:1.1;text-transform:uppercase;word-wrap:break-word}
+.lote-tag{background:#000;color:#fff;font-size:9pt;font-weight:700;font-family:monospace;padding:0.5mm 1.5mm;border-radius:2px;display:inline-block;margin-bottom:1.5mm}
+.r{display:flex;margin-bottom:0.8mm;font-size:8pt;line-height:1}
+.k{font-weight:700;color:#333;width:55px;flex-shrink:0}
+.v{color:#000;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qr-b{width:22mm;flex-shrink:0;text-align:center}
+.qr-b img{width:20mm;height:20mm;display:block;margin:0 auto}
+.qc{font-size:6pt;color:#000;text-align:center;margin-top:1mm;font-weight:700}
+.foot{border-top:1px solid #000;margin-top:2mm;padding-top:1mm;font-size:6.5pt;display:flex;justify-content:space-between}
+@media print{@page{size:72mm 72mm;margin:0}body{padding:2mm}}
 </style></head><body>
 <div class="emp">IMAC — Controle de Estoque</div>
 <div class="layout">
@@ -172,31 +149,31 @@ body{font-family:Arial,sans-serif;width:100mm;padding:3mm;font-size:8.5pt;color:
 <div class="lote-tag">${d.loteImac || '—'}</div>
 <div class="r"><span class="k">Lote forn.</span><span class="v">${d.loteForn || '—'}</span></div>
 <div class="r"><span class="k">NF</span><span class="v">${d.nf || '—'}</span></div>
-\${d.fornecedor ? \`<div class="r"><span class="k">Fornecedor</span><span class="v">\${d.fornecedor}</span></div>\` : ''}
-<div class="r"><span class="k">Validade</span><span class="v"><b>${d.validade || '—'}</b></span></div>
+${d.fornecedor ? `<div class="r"><span class="k">Fornecedor</span><span class="v">${d.fornecedor}</span></div>` : ''}
+<div class="r"><span class="k">Validade</span><span class="v" style="font-size:9pt"><b>${d.validade || '—'}</b></span></div>
 <div class="r"><span class="k">Qtd.</span><span class="v">${d.quantidade || '—'}</span></div>
 <div class="r"><span class="k">Local</span><span class="v">${d.endereco || '—'}</span></div>
 <div class="r"><span class="k">Entrada</span><span class="v">${d.dataRec || '—'}</span></div>
-\${d.responsavel ? \`<div class="r"><span class="k">Operador</span><span class="v">\${d.responsavel}</span></div>\` : ''}
+${d.responsavel ? `<div class="r"><span class="k">Operador</span><span class="v">${d.responsavel}</span></div>` : ''}
 </div>
 <div class="qr-b">
-\${qrSrc ? \`<img src="\${qrSrc}">\` : ''}
-<div class="qc">IMAC QR<br>${d.loteImac ? d.loteImac.slice(-6) : '000000'}</div>
+${qrSrc ? `<img src="${qrSrc}">` : ''}
+<div class="qc">IMAC QR<br>${d.loteImac ? d.loteImac.slice(-4) : '0000'}</div>
 </div>
 </div>
-<div class="foot"><span>IMAC · Rastreabilidade</span><span>\${new Date().toLocaleString('pt-BR')}</span></div>
-<script>window.onload=function(){window.print();setTimeout(function(){window.close()},1000)}<\/script>
+<div class="foot"><span>IMAC · Rastreabilidade</span><span>${new Date().toLocaleDateString('pt-BR')}</span></div>
+<script>window.onload=function(){window.print();setTimeout(function(){window.close()},600)}<\/script>
 </body></html>`;
 
     const w = window.open('', '_blank', 'width=1,height=1');
     if (w) { 
       w.document.write(html); 
       w.document.close(); 
-      addLog('Impressão enviada para a Zebra GC420t', 'ok'); 
+      addLog('Impressão enviada com sucesso.', 'ok'); 
     } else {
-      addLog('ERRO: Ative as permissões de Pop-ups neste navegador!', 'err');
+      addLog('ERRO: Ative os Pop-ups do navegador!', 'err');
     }
-  }, 400);
+  }, 350);
 }
 </script>
 </body>
