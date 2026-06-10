@@ -47,9 +47,9 @@ h1{font-size:18px;font-weight:700;margin-bottom:4px}
   <div style="font-size:12px;color:#6b7a99;line-height:1.7">
     <b>Como usar com o Firebase:</b><br>
     1. Deixe esta página aberta no PC do estoque (conectado ao cabo).<br>
-    2. No app do celular (Wi-Fi), configure para enviar os dados para o nó <code>imac-fila-impressao</code> neste mesmo Firebase.<br>
-    3. Assim que o celular salvar o registro, o PC abrirá a janela de impressão da Zebra automaticamente.<br><br>
-    <b>Vantagem:</b> Não importa se o PC está no cabo e o celular no Wi-Fi, a comunicação é via nuvem.
+    2. No app do celular (Wi-Fi), realize o recebimento normalmente.<br>
+    3. Assim que confirmar no celular, o PC abrirá a janela de impressão da Zebra automaticamente.<br><br>
+    <b>Nota:</b> Certifique-se de permitir os <b>Pop-ups</b> deste endereço no navegador do PC.
   </div>
 </div>
 
@@ -64,7 +64,7 @@ function addLog(msg, tipo='') {
   log.scrollTop = log.scrollHeight;
 }
 
-// ── Configuração do seu Firebase ─────────────────────────────
+// ── Configuração do Firebase da IMAC ─────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyCgniZ8fVNdmbzkyfOKGrfXjcKhvX-OIhI",
   authDomain: "etiquetas-84828.firebaseapp.com",
@@ -72,15 +72,14 @@ const firebaseConfig = {
   storageBucket: "etiquetas-84828.firebasestorage.app",
   messagingSenderId: "820722854531",
   appId: "1:820722854531:web:7d0460a9da17947c5789b6",
-  databaseURL: "https://etiquetas-84828-default-rtdb.firebaseio.com" // URL padrão do Realtime Database
+  databaseURL: "https://etiquetas-84828-default-rtdb.firebaseio.com"
 };
 
-// Inicializa o Firebase
+// Inicializa o Firebase e escuta conexões
 try {
   firebase.initializeApp(firebaseConfig);
   const database = firebase.database();
   
-  // Monitor de conexão do Firebase
   database.ref('.info/connected').on('value', (snap) => {
     if (snap.val() === true) {
       fbStatusSpan.textContent = "Conectado com Sucesso";
@@ -91,19 +90,19 @@ try {
     } else {
       fbStatusSpan.textContent = "Desconectado";
       fbStatusSpan.style.color = "#ef5350";
+      statusBox.className = 'status err';
+      statusBox.textContent = '❌ Desconectado do Firebase. Verifique sua internet ou regras do banco.';
     }
   });
 
-  // ── OUVINTE EM TEMPO REAL DA FILA DE IMPRESSÃO ────────────────
+  // Ouvinte em tempo real para a fila de impressão
   database.ref('imac-fila-impressao').on('child_added', (snapshot) => {
     const job = snapshot.val();
     const jobId = snapshot.key;
 
     if (job) {
-      // Processa a impressão na Zebra local
       processarJob(job);
-      
-      // Limpa o item da fila no Firebase para não re-imprimir ao atualizar a página
+      // Remove o registro processado para não acumular nem duplicar impressões
       database.ref('imac-fila-impressao/' + jobId).remove();
     }
   });
@@ -173,25 +172,30 @@ body{font-family:Arial,sans-serif;width:100mm;padding:3mm;font-size:8.5pt;color:
 <div class="lote-tag">${d.loteImac || '—'}</div>
 <div class="r"><span class="k">Lote forn.</span><span class="v">${d.loteForn || '—'}</span></div>
 <div class="r"><span class="k">NF</span><span class="v">${d.nf || '—'}</span></div>
-${d.fornecedor?`<div class="r"><span class="k">Fornecedor</span><span class="v">${d.fornecedor}</span></div>`:''}
+\${d.fornecedor ? \`<div class="r"><span class="k">Fornecedor</span><span class="v">\${d.fornecedor}</span></div>\` : ''}
 <div class="r"><span class="k">Validade</span><span class="v"><b>${d.validade || '—'}</b></span></div>
-<div class="r"><span class="k">Qtd.</span><span class="v">${d.quantidade||'—'}</span></div>
-<div class="r"><span class="k">Local</span><span class="v">${d.endereco||'—'}</span></div>
+<div class="r"><span class="k">Qtd.</span><span class="v">${d.quantidade || '—'}</span></div>
+<div class="r"><span class="k">Local</span><span class="v">${d.endereco || '—'}</span></div>
 <div class="r"><span class="k">Entrada</span><span class="v">${d.dataRec || '—'}</span></div>
-${d.responsavel?`<div class="r"><span class="k">Operador</span><span class="v">${d.responsavel}</span></div>`:''}
+\${d.responsavel ? \`<div class="r"><span class="k">Operador</span><span class="v">\${d.responsavel}</span></div>\` : ''}
 </div>
 <div class="qr-b">
-${qrSrc?`<img src="${qrSrc}">`:''}
+\${qrSrc ? \`<img src="\${qrSrc}">\` : ''}
 <div class="qc">IMAC QR<br>${d.loteImac ? d.loteImac.slice(-6) : '000000'}</div>
 </div>
 </div>
-<div class="foot"><span>IMAC · Rastreabilidade</span><span>${new Date().toLocaleString('pt-BR')}</span></div>
+<div class="foot"><span>IMAC · Rastreabilidade</span><span>\${new Date().toLocaleString('pt-BR')}</span></div>
 <script>window.onload=function(){window.print();setTimeout(function(){window.close()},1000)}<\/script>
 </body></html>`;
 
     const w = window.open('', '_blank', 'width=1,height=1');
-    if (w) { w.document.write(html); w.document.close(); addLog('Impressão enviada para a Zebra', 'ok'); }
-    else addLog('ERRO: Ative as permissões de Pop-ups neste navegador!', 'err');
+    if (w) { 
+      w.document.write(html); 
+      w.document.close(); 
+      addLog('Impressão enviada para a Zebra GC420t', 'ok'); 
+    } else {
+      addLog('ERRO: Ative as permissões de Pop-ups neste navegador!', 'err');
+    }
   }, 400);
 }
 </script>
