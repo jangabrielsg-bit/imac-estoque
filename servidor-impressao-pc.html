@@ -13,7 +13,7 @@ h1{font-size:18px;font-weight:700;margin-bottom:4px}
 .ok{background:#f0fdf8;color:#1a4a3a;border:1.5px solid #43c59e}
 .err{background:#fef2f2;color:#7f1d1d;border:1.5px solid #ef5350}
 .warn{background:#fffbeb;color:#78350f;border:1.5px solid #f59e0b}
-.log{background:#1a1a2e;color:#4fc3f7;padding:166px 16px;border-radius:8px;font-family:'Courier New',monospace;font-size:12px;height:200px;overflow-y:auto;line-height:1.7}
+.log{background:#1a1a2e;color:#4fc3f7;padding:16px;border-radius:8px;font-family:'Courier New',monospace;font-size:12px;height:200px;overflow-y:auto;line-height:1.7}
 .log .ts{color:#90a0b0}
 .log .ok{color:#43c59e;background:none;border:none;padding:0;font-weight:normal}
 .log .err{color:#ef5350;background:none;border:none;padding:0;font-weight:normal}
@@ -107,78 +107,131 @@ function processarJob(dados) {
 }
 
 function imprimirEtiqueta(d) {
+  // Gera QR em alta resolução (200px) para boa nitidez na impressão térmica
   const div = document.createElement('div');
-  div.style.position = 'absolute';
-  div.style.left = '-9999px';
+  div.style.cssText = 'position:fixed;top:-9999px;left:-9999px;visibility:hidden';
   document.body.appendChild(div);
 
-  // Compactação de dados para o QR Code ficar menos denso e nítido na térmica
-  const qrData = `${d.loteImac}|${d.produto.slice(0,20)}|${d.loteForn}|${d.validade}`;
+  const qrData = [d.loteImac, d.produto.slice(0,20), d.loteForn, d.validade].join('|');
 
   new QRCode(div, {
-    text: qrData, 
-    width: 105, 
-    height: 105,
-    colorDark: '#000000', 
+    text: qrData,
+    width: 200,
+    height: 200,
+    colorDark: '#000000',
     colorLight: '#ffffff',
-    correctLevel: QRCode.CorrectLevel.L // Nível L cria blocos maiores, perfeito para a GC420t
+    correctLevel: QRCode.CorrectLevel.M
   });
 
+  // 600ms para garantir que o QR renderizou completamente no canvas
   setTimeout(() => {
     const canvas = div.querySelector('canvas');
-    const qrSrc  = canvas ? canvas.toDataURL('image/png') : '';
+    const qrSrc  = canvas ? canvas.toDataURL('image/png', 1.0) : '';
     document.body.removeChild(div);
 
-    // Estrutura HTML travada em 72x72mm sem transbordo de página
+    // ── HTML da etiqueta ────────────────────────────────────────────────
+    // Correções: @page fora do @media print | flexbox sem position:absolute |
+    //            overflow:hidden em html E body | html/body fixados em 72x72mm
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Arial,sans-serif;width:72mm;height:72mm;padding:3mm;color:#000;background:#fff;overflow:hidden}
-.emp{font-size:7pt;font-weight:700;text-transform:uppercase;border-bottom:1.5px solid #000;padding-bottom:1mm;margin-bottom:2mm}
-.layout{display:flex;gap:3mm;align-items:flex-start}
-.info{flex:1;min-width:0}
-.prod{font-size:13pt;font-weight:700;margin-bottom:1mm;line-height:1.1;text-transform:uppercase;word-wrap:break-word}
-.lote-tag{background:#000;color:#fff;font-size:9.5pt;font-weight:700;font-family:monospace;padding:0.5mm 1.5mm;border-radius:2px;display:inline-block;margin-bottom:2mm}
-.r{display:flex;margin-bottom:1.2mm;font-size:8.5pt;line-height:1}
-.k{font-weight:700;color:#333;width:58px;flex-shrink:0}
-.v{color:#000;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.qr-b{width:26mm;flex-shrink:0;text-align:center;margin-top:1mm}
-.qr-b img{width:24mm;height:24mm;display:block;margin:0 auto}
-.qc{font-size:6.5pt;color:#000;text-align:center;margin-top:1.5mm;font-weight:700;font-family:monospace}
-.foot{border-top:1.5px solid #000;position:absolute;bottom:3mm;width:66mm;padding-top:1mm;font-size:7pt;display:flex;justify-content:space-between}
-@media print{@page{size:72mm 72mm;margin:0}body{padding:3mm}}
-</style></head><body>
-<div class="emp">IMAC — Controle de Estoque</div>
-<div class="layout">
-<div class="info">
-<div class="prod">${d.produto || '—'}</div>
-<div class="lote-tag">${d.loteImac || '—'}</div>
-<div class="r"><span class="k">Lote forn.</span><span class="v">${d.loteForn || '—'}</span></div>
-<div class="r"><span class="k">NF</span><span class="v">${d.nf || '—'}</span></div>
-${d.fornecedor ? `<div class="r"><span class="k">Fornecedor</span><span class="v">${d.fornecedor}</span></div>` : ''}
-<div class="r"><span class="k">Validade</span><span class="v" style="font-size:9.5pt"><b>${d.validade || '—'}</b></span></div>
-<div class="r"><span class="k">Qtd.</span><span class="v">${d.quantidade || '—'}</span></div>
-<div class="r"><span class="k">Local</span><span class="v">${d.endereco || '—'}</span></div>
-<div class="r"><span class="k">Entrada</span><span class="v">${d.dataRec || '—'}</span></div>
-${d.responsavel ? `<div class="r"><span class="k">Operador</span><span class="v">${d.responsavel}</span></div>` : ''}
+@page { size: 72mm 72mm; margin: 0; }
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html {
+    width: 72mm; height: 72mm;
+    overflow: hidden;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    width: 72mm; height: 72mm;
+    overflow: hidden;
+    color: #000; background: #fff;
+    display: flex; flex-direction: column;
+    padding: 2.5mm;
+    page-break-after: avoid;
+    break-after: avoid;
+}
+.emp { font-size: 6.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+       border-bottom: 1px solid #000; padding-bottom: 1mm; margin-bottom: 1.5mm;
+       display: flex; justify-content: space-between; flex-shrink: 0; }
+.content { display: flex; gap: 2.5mm; flex: 1; min-height: 0; overflow: hidden; }
+.info { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.prod { font-size: 10.5pt; font-weight: 700; line-height: 1.15; text-transform: uppercase;
+        word-break: break-word; margin-bottom: 1.2mm; flex-shrink: 0; }
+.lote-tag { background: #000; color: #fff; font-size: 7.5pt; font-weight: 700;
+            font-family: 'Courier New', monospace; padding: 0.3mm 1.5mm;
+            border-radius: 1px; display: inline-block; margin-bottom: 1.5mm; flex-shrink: 0; }
+.rows { flex: 1; overflow: hidden; }
+.r { display: flex; margin-bottom: 0.85mm; font-size: 7pt; line-height: 1.25; }
+.k { font-weight: 700; color: #555; width: 48px; flex-shrink: 0; font-size: 6pt; }
+.v { color: #000; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.v.val { font-size: 8.5pt; font-weight: 700; }
+.qr-b { width: 22mm; flex-shrink: 0; display: flex; flex-direction: column;
+         align-items: center; gap: 1mm; padding-top: 0.5mm; }
+.qr-b img { width: 21mm; height: 21mm; display: block; image-rendering: pixelated; }
+.qc { font-size: 5.5pt; text-align: center; font-weight: 700;
+      font-family: 'Courier New', monospace; color: #333; line-height: 1.3; }
+.foot { border-top: 1px solid #000; padding-top: 1mm; margin-top: 1.5mm;
+        font-size: 6.5pt; display: flex; justify-content: space-between; flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div class="emp"><span>IMAC — Controle de Estoque</span><span>Rastreabilidade</span></div>
+<div class="content">
+  <div class="info">
+    <div class="prod">${d.produto || '—'}</div>
+    <div class="lote-tag">${d.loteImac || '—'}</div>
+    <div class="rows">
+      <div class="r"><span class="k">Lote forn.</span><span class="v">${d.loteForn || '—'}</span></div>
+      <div class="r"><span class="k">NF</span><span class="v">${d.nf || '—'}</span></div>
+      ${d.fornecedor ? `<div class="r"><span class="k">Fornecedor</span><span class="v">${d.fornecedor}</span></div>` : ''}
+      <div class="r"><span class="k">Validade</span><span class="v val">${d.validade || '—'}</span></div>
+      ${d.quantidade ? `<div class="r"><span class="k">Qtd.</span><span class="v">${d.quantidade}</span></div>` : ''}
+      ${d.endereco ? `<div class="r"><span class="k">Local</span><span class="v">${d.endereco}</span></div>` : ''}
+      <div class="r"><span class="k">Entrada</span><span class="v">${d.dataRec || '—'}</span></div>
+      ${d.responsavel ? `<div class="r"><span class="k">Operador</span><span class="v">${d.responsavel}</span></div>` : ''}
+    </div>
+  </div>
+  <div class="qr-b">
+    ${qrSrc ? `<img src="${qrSrc}" alt="QR">` : ''}
+    <div class="qc">LOTE IMAC<br>${d.loteImac ? d.loteImac.slice(-6) : '—'}</div>
+  </div>
 </div>
-<div class="qr-b">
-${qrSrc ? `<img src="${qrSrc}">` : ''}
-<div class="qc">LOTE IMAC<br>${d.loteImac ? d.loteImac.slice(-4) : '0000'}</div>
+<div class="foot">
+  <span>IMAC · Rastreabilidade</span>
+  <span>${new Date().toLocaleDateString('pt-BR')}</span>
 </div>
-</div>
-<div class="foot"><span>IMAC · Rastreabilidade</span><span>${new Date().toLocaleDateString('pt-BR')}</span></div>
-<script>window.onload=function(){window.print();setTimeout(function(){window.close()},600)}<\/script>
+<script>setTimeout(function(){ window.print(); }, 300);<\/script>
 </body></html>`;
 
-    const w = window.open('', '_blank', 'width=1,height=1');
-    if (w) { 
-      w.document.write(html); 
-      w.document.close(); 
-    } else {
-      addLog('ERRO: Ative as permissões de Pop-ups neste navegador!', 'err');
-    }
-  }, 350);
+    // ── Usa iframe oculto em vez de window.open ─────────────────────────
+    // window.open cria uma página em branco inicial → gera 2 páginas na impressão
+    // O iframe resolve isso: não tem página inicial em branco
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:0;opacity:0';
+    document.body.appendChild(iframe);
+
+    const iDoc = iframe.contentDocument || iframe.contentWindow.document;
+    iDoc.open();
+    iDoc.write(html);
+    iDoc.close();
+
+    // 800ms para o iframe + QR renderizarem antes de disparar o print()
+    setTimeout(() => {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch(e) {
+        addLog('Erro ao imprimir via iframe: ' + e.message, 'err');
+      }
+      // Remove o iframe após o diálogo de impressão fechar (5s de margem)
+      setTimeout(() => {
+        if (document.body.contains(iframe)) document.body.removeChild(iframe);
+      }, 5000);
+    }, 800);
+
+  }, 600);
 }
 </script>
 </body>
