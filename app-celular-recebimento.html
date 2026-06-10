@@ -31,7 +31,7 @@ header{background:var(--navy);color:#fff;padding:0 16px;height:52px;display:flex
 .scan-result{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#f0fdf8;border:1.5px solid var(--green);border-radius:8px;margin-top:10px;font-size:13px;font-weight:600;color:#1a4a3a;font-family:monospace}
 .field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
 label{font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.05em}
-input,select{border:1.5px solid var(--border);border-radius:8px;padding:11px 14px;font-size:15px;color:var(--navy);background:#fff;width:100%}
+input{border:1.5px solid var(--border);border-radius:8px;padding:11px 14px;font-size:15px;color:var(--navy);background:#fff;width:100%}
 input:focus{outline:none;border-color:var(--blue);background:#f8fdff}
 .btn{border:none;border-radius:10px;padding:14px 20px;font-size:15px;font-weight:600;cursor:pointer;width:100%;display:block;text-align:center}
 .btn-primary{background:var(--navy);color:#fff}
@@ -40,18 +40,30 @@ input:focus{outline:none;border-color:var(--blue);background:#f8fdff}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:13px 22px;border-radius:10px;font-size:14px;opacity:0;transition:all .25s;z-index:999}
 #toast.show{opacity:1}
+
+/* ESTILOS DO HISTÓRICO */
+.hist-item{padding:14px 0;border-bottom:1px solid #f0f2f5;display:flex;flex-direction:column;gap:4px}
+.hist-item:last-child{border-bottom:none}
+.hist-lote{font-family:monospace;font-size:13px;font-weight:700;color:var(--navy)}
+.hist-prod{font-size:15px;font-weight:600;color:var(--navy)}
+.hist-meta{font-size:12px;color:var(--gray)}
+.hist-actions{display:flex;gap:8px;margin-top:6px}
+.btn-sm{border:1.5px solid var(--border);border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:var(--gray);transition:all .15s}
+.btn-sm.blue{border-color:var(--blue);color:var(--blue)}
+.btn-sm.blue:hover{background:#e8f7fe}
 </style>
 </head>
 <body>
 
 <header>
   <div class="logo">IMAC <span>·</span> Estoque</div>
-  <div style="font-size:11px;color:#43c59e" id="status-fb">Nuvem ativa</div>
+  <div style="font-size:11px;color:#43c59e" id="status-fb">Nuvem Conectada</div>
 </header>
 
 <div class="tabs">
   <div class="tab active" onclick="showTab('scan')">📷 Bipar</div>
   <div class="tab" onclick="showTab('form')">📝 Dados</div>
+  <div class="tab" onclick="showTab('hist')">📋 Histórico</div>
   <div class="tab" onclick="showTab('cfg')">⚙️ Config</div>
 </div>
 
@@ -91,10 +103,19 @@ input:focus{outline:none;border-color:var(--blue);background:#f8fdff}
   <button class="btn btn-green" onclick="dispararFila()">🖨 Enviar para Impressão</button>
 </div>
 
+<div class="screen" id="tab-hist">
+  <div class="card">
+    <div class="card-title">Últimos Recebimentos</div>
+    <div id="historico-lista">
+      <div style="text-align:center;padding:32px;color:var(--gray);font-size:13px">Nenhum recebimento ainda.</div>
+    </div>
+  </div>
+</div>
+
 <div class="screen" id="tab-cfg">
   <div class="card">
     <div class="card-title">Configuração</div>
-    <p style="font-size:13px;color:var(--gray)">O aplicativo está configurado para enviar impressões diretamente via nuvem ao Firebase integrado.</p>
+    <p style="font-size:13px;color:var(--gray)">O aplicativo celular está pareado com a nuvem. Toda impressão enviada aqui cai direto no servidor Node do PC.</p>
   </div>
 </div>
 
@@ -104,6 +125,9 @@ input:focus{outline:none;border-color:var(--blue);background:#f8fdff}
 let codigoAtual = '';
 let scanner = null;
 let scannerAtivo = false;
+
+// Carrega o histórico salvo no celular (ou inicia vazio caso não exista)
+let historico = JSON.parse(localStorage.getItem('imac-rec-hist') || '[]');
 
 const firebaseConfig = {
   apiKey: "AIzaSyCgniZ8fVNdmbzkyfOKGrfXjcKhvX-OIhI",
@@ -122,11 +146,13 @@ document.getElementById('data-rec').value = new Date().toISOString().split('T')[
 
 function showTab(nome) {
   document.querySelectorAll('.tab').forEach((t, i) => {
-    t.classList.toggle('active', ['scan','form','cfg'][i] === nome);
+    t.classList.toggle('active', ['scan','form','hist','cfg'][i] === nome);
   });
-  ['tab-scan','tab-form','tab-cfg'].forEach(id => document.getElementById(id).style.display = 'none');
+  ['tab-scan','tab-form','tab-hist','tab-cfg'].forEach(id => document.getElementById(id).style.display = 'none');
   document.getElementById('tab-' + nome).style.display = 'block';
+  
   if(nome !== 'scan') pararScanner();
+  if(nome === 'hist') renderHistorico();
 }
 
 function iniciarScanner() {
@@ -146,7 +172,7 @@ function iniciarScanner() {
 }
 
 function pararScanner() {
-  if (scanner && scannerAtivo) { scanner.stop(); scannerAtivo = false; }
+  if (scanner && scannerAtivo) { scanner.stop().catch(()=>{}); scannerAtivo = false; }
   document.getElementById('btn-iniciar').textContent = 'Iniciar câmera';
 }
 
@@ -158,7 +184,11 @@ function dispararFila() {
   }
 
   const d = new Date();
-  const loteImac = `IMAC-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const rand = Math.floor(1000 + Math.random() * 9000);
+  const loteImac = `IMAC-${yyyy}${mm}${dd}-${rand}`;
 
   const pacote = {
     loteImac,
@@ -170,25 +200,65 @@ function dispararFila() {
     dataRec: fmtD(v('data-rec')),
     quantidade: v('quantidade'),
     endereco: v('endereco'),
-    responsavel: v('responsavel'),
-    timestamp: firebase.database.ServerValue.TIMESTAMP
+    responsavel: v('responsavel')
   };
 
   const qtd = parseInt(document.getElementById('qtd-etiquetas').value) || 1;
   
+  // Envia para a fila do Firebase de acordo com as cópias informadas
   for(let i = 0; i < qtd; i++){
     database.ref('imac-fila-impressao').push(pacote);
   }
+
+  // Salva este registro no topo da lista de histórico local do dispositivo
+  historico.unshift(pacote);
+  localStorage.setItem('imac-rec-hist', JSON.stringify(historico.slice(0, 100))); // Guarda os últimos 100 itens
 
   toast('Enviado para a Zebra!');
   limparFormulario();
   showTab('scan');
 }
 
+function renderHistorico() {
+  const el = document.getElementById('historico-lista');
+  if (!historico.length) {
+    el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--gray);font-size:13px">Nenhum recebimento encontrado no histórico.</div>';
+    return;
+  }
+  
+  el.innerHTML = historico.map((h, i) => `
+    <div class="hist-item">
+      <div class="hist-lote">${h.loteImac}</div>
+      <div class="hist-prod">${h.produto.toUpperCase()}</div>
+      <div class="hist-meta">NF: ${h.nf} · Val: ${h.validade} · Qtd: ${h.quantidade || '—'} · Local: ${h.endereco || '—'}</div>
+      <div class="hist-actions">
+        <button class="btn-sm blue" onclick="reimprimirLote(${i})">🖨 Reimprimir</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function reimprimirLote(index) {
+  const pacote = historico[index];
+  if (!pacote) return;
+
+  // Pede confirmação da quantidade de cópias antes de mandar direto para o Node
+  const qtdInformada = prompt(`Deseja imprimir quantas cópias da etiqueta para o lote ${pacote.loteImac}?`, "1");
+  const qtd = parseInt(qtdInformada) || 0;
+
+  if (qtd > 0) {
+    for (let i = 0; i < qtd; i++) {
+      database.ref('imac-fila-impressao').push(pacote);
+    }
+    toast(`Reimpressão enviada! (${qtd} cóp.)`);
+  }
+}
+
 function limparFormulario() {
   ['produto','fornecedor','nf','lote-forn','validade','quantidade','endereco','responsavel'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('btn-ir-form').disabled = true;
   document.getElementById('scan-result').style.display = 'none';
+  document.getElementById('qtd-etiquetas').value = '1';
 }
 
 function fmtD(iso){
