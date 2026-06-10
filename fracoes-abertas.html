@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>IMAC — Frações Abertas</title>
+<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1a1a2e;--blue:#4fc3f7;--green:#43c59e;--red:#ef5350;
+  --amber:#f59e0b;--gray:#6b7a99;--light:#f0f2f5;--border:#dde3ee;
+}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--light);color:var(--navy);min-height:100vh;font-size:15px}
+header{background:var(--navy);color:#fff;padding:0 16px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+.logo{font-size:17px;font-weight:700;letter-spacing:.03em}
+.logo span{color:var(--blue)}
+.badge-count{background:var(--red);color:#fff;font-size:11px;font-weight:700;border-radius:20px;padding:2px 8px;min-width:22px;text-align:center}
+.tabs{display:flex;background:#fff;border-bottom:2px solid var(--border);position:sticky;top:52px;z-index:100}
+.tab{flex:1;padding:13px 8px;text-align:center;font-size:13px;font-weight:600;color:var(--gray);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.tab.active{color:var(--navy);border-bottom-color:var(--blue)}
+.screen{display:none;padding:16px}
+.screen.active{display:block}
+.card{background:#fff;border-radius:12px;padding:20px;margin-bottom:14px;border:1px solid var(--border)}
+.card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-title::before{content:'';display:block;width:3px;height:13px;background:var(--blue);border-radius:2px}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+label{font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.05em}
+input,select,textarea{border:1.5px solid var(--border);border-radius:8px;padding:11px 14px;font-size:15px;color:var(--navy);background:#fff;width:100%;font-family:inherit}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);background:#f8fdff}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{border:none;border-radius:10px;padding:14px 20px;font-size:15px;font-weight:600;cursor:pointer;width:100%;display:block;text-align:center;transition:all .15s}
+.btn-primary{background:var(--navy);color:#fff}
+.btn-green{background:var(--green);color:#fff}
+.btn-red{background:var(--red);color:#fff}
+.btn-sm{border:1.5px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:var(--gray);transition:all .15s;white-space:nowrap}
+.btn-sm:hover{background:var(--light)}
+.btn-sm.danger{border-color:#ffcdd2;color:var(--red)}
+.btn-sm.ok{border-color:#c8f0e5;color:var(--green)}
+/* ── Cards de frações ── */
+.fracao-card{background:#fff;border-radius:12px;border:1px solid var(--border);margin-bottom:12px;overflow:hidden;transition:all .2s}
+.fracao-card.vencida{border-color:#ffcdd2;background:#fff8f8}
+.fracao-card.vence-hoje{border-color:#ffe0b2;background:#fffbf5}
+.fracao-card.vence-breve{border-color:#fff9c4;background:#fffef5}
+.fracao-card.fechada{opacity:.6;background:#f8f9fc}
+.fracao-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;gap:10px}
+.fracao-item{font-size:16px;font-weight:700;color:var(--navy);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.status-pill{font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;flex-shrink:0}
+.pill-aberta{background:#e8f7fe;color:#0277bd;border:1px solid #b3e5fc}
+.pill-vencida{background:#ffebee;color:#c62828;border:1px solid #ffcdd2}
+.pill-vence-hoje{background:#fff3e0;color:#e65100;border:1px solid #ffe0b2}
+.pill-vence-breve{background:#fffde7;color:#f57f17;border:1px solid #fff9c4}
+.pill-fechada{background:#f5f5f5;color:#757575;border:1px solid #e0e0e0}
+.fracao-body{padding:0 16px 12px;display:grid;grid-template-columns:1fr 1fr;gap:6px 16px}
+.fracao-field{display:flex;flex-direction:column;gap:1px}
+.fracao-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gray)}
+.fracao-val{font-size:13px;font-weight:600;color:var(--navy)}
+.fracao-val.mono{font-family:'Courier New',monospace;font-size:12px}
+.fracao-val.destaque{font-size:14px;font-weight:700}
+.dias-aberta{font-size:11px;color:var(--gray);padding:0 16px 8px}
+.fracao-footer{border-top:1px solid var(--border);padding:10px 16px;display:flex;gap:8px;justify-content:flex-end;background:#fafafa}
+/* ── Filtros ── */
+.filtros{display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px}
+.filtro-btn{border:1.5px solid var(--border);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:var(--gray);white-space:nowrap;transition:all .15s}
+.filtro-btn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+/* ── Vazio ── */
+.empty{text-align:center;padding:40px 20px;color:var(--gray)}
+.empty-icon{font-size:40px;margin-bottom:10px}
+.empty-msg{font-size:15px;font-weight:600;margin-bottom:6px}
+.empty-sub{font-size:13px}
+/* ── Resumo ── */
+.resumo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.resumo-card{background:#fff;border-radius:10px;padding:14px;text-align:center;border:1px solid var(--border)}
+.resumo-num{font-size:28px;font-weight:800;line-height:1}
+.resumo-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gray);margin-top:4px}
+/* ── Toast ── */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:13px 22px;border-radius:10px;font-size:14px;opacity:0;transition:all .25s;z-index:999;pointer-events:none}
+#toast.show{opacity:1}
+/* ── Modal de confirmação ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:flex;align-items:flex-end;justify-content:center;padding:16px}
+.modal-box{background:#fff;border-radius:16px 16px 12px 12px;padding:24px;width:100%;max-width:420px;animation:slideUp .2s ease}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-title{font-size:17px;font-weight:700;margin-bottom:8px}
+.modal-sub{font-size:14px;color:var(--gray);margin-bottom:20px;line-height:1.5}
+.modal-btns{display:flex;flex-direction:column;gap:8px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">IMAC <span>·</span> Frações</div>
+  <div class="badge-count" id="badge-abertas">0</div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('abertas')">📦 Abertas</div>
+  <div class="tab" onclick="showTab('registrar')">➕ Registrar</div>
+  <div class="tab" onclick="showTab('hist')">📋 Histórico</div>
+</div>
+
+<!-- ═══════════════ ABA: FRAÇÕES ABERTAS ═══════════════ -->
+<div class="screen active" id="tab-abertas">
+
+  <div class="resumo-grid" id="resumo-grid">
+    <div class="resumo-card">
+      <div class="resumo-num" id="res-abertas" style="color:var(--blue)">0</div>
+      <div class="resumo-lbl">Abertas</div>
+    </div>
+    <div class="resumo-card">
+      <div class="resumo-num" id="res-vencendo" style="color:var(--amber)">0</div>
+      <div class="resumo-lbl">Vencendo</div>
+    </div>
+    <div class="resumo-card">
+      <div class="resumo-num" id="res-vencidas" style="color:var(--red)">0</div>
+      <div class="resumo-lbl">Vencidas</div>
+    </div>
+  </div>
+
+  <div class="filtros">
+    <button class="filtro-btn active" onclick="setFiltro('todas',this)">Todas</button>
+    <button class="filtro-btn" onclick="setFiltro('vencidas',this)">⚠ Vencidas</button>
+    <button class="filtro-btn" onclick="setFiltro('vencendo',this)">🕐 Vencendo</button>
+    <button class="filtro-btn" onclick="setFiltro('ok',this)">✓ OK</button>
+  </div>
+
+  <div id="lista-abertas">
+    <div class="empty">
+      <div class="empty-icon">📦</div>
+      <div class="empty-msg">Nenhuma fração aberta</div>
+      <div class="empty-sub">Registre a abertura de um insumo na aba ➕</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ ABA: REGISTRAR ═══════════════ -->
+<div class="screen" id="tab-registrar">
+  <div class="card">
+    <div class="card-title">Identificação do Insumo</div>
+    <div class="field"><label>Item / Produto *</label><input type="text" id="f-item" placeholder="Ex: Farinha de Trigo Medalha de Ouro"></div>
+    <div class="grid-2">
+      <div class="field"><label>Lote Fornecedor *</label><input type="text" id="f-lote-forn" placeholder="Ex: H136"></div>
+      <div class="field"><label>Lote IMAC</label><input type="text" id="f-lote-imac" placeholder="Ex: IMAC-20260610-1234"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Datas</div>
+    <div class="grid-2">
+      <div class="field"><label>Data de Fabricação</label><input type="date" id="f-fab"></div>
+      <div class="field"><label>Data de Validade *</label><input type="date" id="f-val"></div>
+    </div>
+    <div class="field"><label>Data de Abertura</label><input type="date" id="f-abertura"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Informações Adicionais</div>
+    <div class="grid-2">
+      <div class="field"><label>Quantidade Aberta</label><input type="text" id="f-qtd" placeholder="Ex: 25kg de 50kg"></div>
+      <div class="field"><label>Responsável</label><input type="text" id="f-resp" placeholder="Nome do operador"></div>
+    </div>
+    <div class="field"><label>Observação</label><textarea id="f-obs" rows="2" placeholder="Motivo da abertura, localização, etc."></textarea></div>
+  </div>
+  <button class="btn btn-green" onclick="registrarFracao()">📦 Registrar Abertura</button>
+</div>
+
+<!-- ═══════════════ ABA: HISTÓRICO ═══════════════ -->
+<div class="screen" id="tab-hist">
+  <div class="card" style="margin-bottom:8px">
+    <input type="text" id="hist-busca" placeholder="🔍 Buscar por item ou lote..." oninput="renderHistorico()" style="border:none;padding:0;font-size:15px;font-weight:500">
+  </div>
+  <div id="lista-hist">
+    <div class="empty">
+      <div class="empty-icon">📋</div>
+      <div class="empty-msg">Sem registros ainda</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- Modal de confirmação -->
+<div id="modal" style="display:none" class="modal-bg" onclick="if(event.target===this)fecharModal()">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-title">Confirmar</div>
+    <div class="modal-sub" id="modal-sub"></div>
+    <div class="modal-btns" id="modal-btns"></div>
+  </div>
+</div>
+
+<script>
+// ── Firebase ──────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyCgniZ8fVNdmbzkyfOKGrfXjcKhvX-OIhI",
+  authDomain: "etiquetas-84828.firebaseapp.com",
+  projectId: "etiquetas-84828",
+  storageBucket: "etiquetas-84828.firebasestorage.app",
+  messagingSenderId: "820722854531",
+  appId: "1:820722854531:web:7d0460a9da17947c5789b6",
+  databaseURL: "https://etiquetas-84828-default-rtdb.firebaseio.com"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// ── Estado ────────────────────────────────────────────────────────
+let fracoes   = {};   // { key: {item, loteForn, loteImac, fab, val, abertura, qtd, resp, obs, status, fechamento} }
+let filtroAtivo = 'todas';
+
+// Pré-preenche data de abertura com hoje
+document.getElementById('f-abertura').value = new Date().toISOString().split('T')[0];
+
+// ── Firebase listener ─────────────────────────────────────────────
+db.ref('imac-fracoes').on('value', snap => {
+  fracoes = snap.val() || {};
+  renderAbertas();
+  renderHistorico();
+  atualizarResumo();
+  atualizarBadge();
+});
+
+// ── Helpers ───────────────────────────────────────────────────────
+function v(id) { return (document.getElementById(id)?.value || '').trim(); }
+
+function fmtD(iso) {
+  if (!iso) return '—';
+  if (iso.includes('/')) return iso;
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function isoToDate(iso) {
+  if (!iso) return null;
+  const [y, m, d] = iso.split('-');
+  return new Date(+y, +m - 1, +d);
+}
+
+function diasAte(iso) {
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const alvo = isoToDate(iso); if (!alvo) return null;
+  return Math.round((alvo - hoje) / 86400000);
+}
+
+function diasDesde(iso) {
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const alvo = isoToDate(iso); if (!alvo) return 0;
+  return Math.round((hoje - alvo) / 86400000);
+}
+
+function statusValidade(val) {
+  const d = diasAte(val);
+  if (d === null) return 'ok';
+  if (d < 0)  return 'vencida';
+  if (d === 0) return 'vence-hoje';
+  if (d <= 7)  return 'vence-breve';
+  return 'ok';
+}
+
+function pillClass(st, valStatus) {
+  if (st === 'fechada') return 'pill-fechada';
+  if (valStatus === 'vencida')    return 'pill-vencida';
+  if (valStatus === 'vence-hoje') return 'pill-vence-hoje';
+  if (valStatus === 'vence-breve') return 'pill-vence-breve';
+  return 'pill-aberta';
+}
+
+function pillLabel(st, valStatus) {
+  if (st === 'fechada') return '✓ Fechada';
+  if (valStatus === 'vencida')    return '⚠ Vencida';
+  if (valStatus === 'vence-hoje') return '🕐 Vence hoje';
+  if (valStatus === 'vence-breve') return '⏳ Vence em breve';
+  return '● Aberta';
+}
+
+// ── Registrar fração ──────────────────────────────────────────────
+function registrarFracao() {
+  const item = v('f-item');
+  const val  = v('f-val');
+  if (!item) { toast('Informe o nome do item.'); return; }
+  if (!val)  { toast('Informe a data de validade.'); return; }
+
+  const nova = {
+    item,
+    loteForn:  v('f-lote-forn')  || null,
+    loteImac:  v('f-lote-imac')  || null,
+    fab:       v('f-fab')        || null,
+    val,
+    abertura:  v('f-abertura')   || new Date().toISOString().split('T')[0],
+    qtd:       v('f-qtd')        || null,
+    resp:      v('f-resp')       || null,
+    obs:       v('f-obs')        || null,
+    status:    'aberta',
+    criadoEm:  Date.now(),
+  };
+
+  db.ref('imac-fracoes').push(nova);
+  toast('Fração registrada!');
+  limparForm();
+  showTab('abertas');
+}
+
+function limparForm() {
+  ['f-item','f-lote-forn','f-lote-imac','f-fab','f-val','f-qtd','f-resp','f-obs'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('f-abertura').value = new Date().toISOString().split('T')[0];
+}
+
+// ── Fechar fração ─────────────────────────────────────────────────
+function confirmarFechar(key) {
+  const f = fracoes[key]; if (!f) return;
+  abrirModal(
+    '📦 Fechar fração',
+    `Confirma que o item <strong>${f.item}</strong> (lote ${f.loteForn || '—'}) foi totalmente utilizado ou descartado?`,
+    [
+      { label: '✓ Confirmar — Fechar', cls: 'btn btn-green', fn: () => fecharFracao(key) },
+      { label: 'Cancelar', cls: 'btn btn-sm', fn: fecharModal },
+    ]
+  );
+}
+
+function fecharFracao(key) {
+  db.ref('imac-fracoes/' + key).update({ status: 'fechada', fechamento: Date.now() });
+  toast('Fração fechada!');
+  fecharModal();
+}
+
+// ── Excluir ───────────────────────────────────────────────────────
+function confirmarExcluir(key) {
+  const f = fracoes[key]; if (!f) return;
+  abrirModal(
+    '🗑 Excluir registro',
+    `Excluir permanentemente o registro de <strong>${f.item}</strong>? Esta ação não pode ser desfeita.`,
+    [
+      { label: '🗑 Excluir', cls: 'btn btn-red', fn: () => { db.ref('imac-fracoes/' + key).remove(); toast('Excluído.'); fecharModal(); } },
+      { label: 'Cancelar', cls: 'btn btn-sm', fn: fecharModal },
+    ]
+  );
+}
+
+// ── Renderizar frações abertas ────────────────────────────────────
+function setFiltro(f, btn) {
+  filtroAtivo = f;
+  document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAbertas();
+}
+
+function renderAbertas() {
+  const el = document.getElementById('lista-abertas');
+  const abertas = Object.entries(fracoes)
+    .filter(([, f]) => f.status !== 'fechada')
+    .map(([key, f]) => ({ key, ...f, _vs: statusValidade(f.val) }))
+    .filter(f => {
+      if (filtroAtivo === 'vencidas')  return f._vs === 'vencida';
+      if (filtroAtivo === 'vencendo')  return f._vs === 'vence-hoje' || f._vs === 'vence-breve';
+      if (filtroAtivo === 'ok')        return f._vs === 'ok';
+      return true;
+    })
+    .sort((a, b) => diasAte(a.val) - diasAte(b.val)); // mais urgentes primeiro
+
+  if (!abertas.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">✅</div><div class="empty-msg">Nenhuma fração ${filtroAtivo !== 'todas' ? 'nesta categoria' : 'aberta'}</div></div>`;
+    return;
+  }
+
+  el.innerHTML = abertas.map(f => {
+    const diasV    = diasAte(f.val);
+    const diasAbr  = diasDesde(f.abertura);
+    const cardCls  = f._vs === 'vencida' ? 'vencida' : f._vs === 'vence-hoje' ? 'vence-hoje' : f._vs === 'vence-breve' ? 'vence-breve' : '';
+    const pCls     = pillClass('aberta', f._vs);
+    const pLbl     = pillLabel('aberta', f._vs);
+    const diasValTxt = diasV === null ? '' : diasV < 0 ? `Venceu há ${Math.abs(diasV)} dia(s)` : diasV === 0 ? 'Vence hoje!' : `Vence em ${diasV} dia(s)`;
+
+    return `
+    <div class="fracao-card ${cardCls}">
+      <div class="fracao-header">
+        <div class="fracao-item" title="${f.item}">${f.item}</div>
+        <div class="status-pill ${pCls}">${pLbl}</div>
+      </div>
+      <div class="fracao-body">
+        <div class="fracao-field">
+          <div class="fracao-lbl">Lote Fornecedor</div>
+          <div class="fracao-val mono">${f.loteForn || '—'}</div>
+        </div>
+        <div class="fracao-field">
+          <div class="fracao-lbl">Lote IMAC</div>
+          <div class="fracao-val mono" style="font-size:11px">${f.loteImac || '—'}</div>
+        </div>
+        <div class="fracao-field">
+          <div class="fracao-lbl">Fabricação</div>
+          <div class="fracao-val">${fmtD(f.fab)}</div>
+        </div>
+        <div class="fracao-field">
+          <div class="fracao-lbl">Validade</div>
+          <div class="fracao-val destaque" style="color:${f._vs==='vencida'?'var(--red)':f._vs==='vence-hoje'?'var(--amber)':f._vs==='vence-breve'?'#f57f17':'var(--green)'}">${fmtD(f.val)}</div>
+        </div>
+        ${f.qtd ? `<div class="fracao-field"><div class="fracao-lbl">Quantidade</div><div class="fracao-val">${f.qtd}</div></div>` : ''}
+        <div class="fracao-field">
+          <div class="fracao-lbl">Aberto em</div>
+          <div class="fracao-val">${fmtD(f.abertura)}</div>
+        </div>
+      </div>
+      <div class="dias-aberta">
+        ${diasAbr > 0 ? `⏱ Aberta há <strong>${diasAbr} dia(s)</strong>` : '⏱ Aberta hoje'}
+        ${diasValTxt ? ` · <span style="font-weight:700;color:${f._vs==='vencida'?'var(--red)':f._vs==='vence-hoje'?'var(--amber)':'var(--gray)'}">${diasValTxt}</span>` : ''}
+        ${f.resp ? ` · ${f.resp}` : ''}
+        ${f.obs ? `<br>💬 ${f.obs}` : ''}
+      </div>
+      <div class="fracao-footer">
+        <button class="btn-sm danger" onclick="confirmarExcluir('${f.key}')">🗑 Excluir</button>
+        <button class="btn-sm ok" onclick="confirmarFechar('${f.key}')">✓ Fechar / Usar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Renderizar histórico ──────────────────────────────────────────
+function renderHistorico() {
+  const el    = document.getElementById('lista-hist');
+  const busca = (document.getElementById('hist-busca')?.value || '').toLowerCase();
+
+  const todos = Object.entries(fracoes)
+    .map(([key, f]) => ({ key, ...f }))
+    .filter(f => !busca || f.item.toLowerCase().includes(busca) || (f.loteForn||'').toLowerCase().includes(busca) || (f.loteImac||'').toLowerCase().includes(busca))
+    .sort((a, b) => (b.criadoEm || 0) - (a.criadoEm || 0));
+
+  if (!todos.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📋</div><div class="empty-msg">Sem registros${busca ? ' para "'+busca+'"' : ''}</div></div>`;
+    return;
+  }
+
+  el.innerHTML = todos.map(f => {
+    const isFechada = f.status === 'fechada';
+    const vs        = statusValidade(f.val);
+    const pCls      = pillClass(f.status, vs);
+    const pLbl      = pillLabel(f.status, vs);
+    return `
+    <div class="fracao-card ${isFechada ? 'fechada' : (vs === 'vencida' ? 'vencida' : vs === 'vence-hoje' ? 'vence-hoje' : '')}">
+      <div class="fracao-header">
+        <div class="fracao-item">${f.item}</div>
+        <div class="status-pill ${pCls}">${pLbl}</div>
+      </div>
+      <div class="fracao-body">
+        <div class="fracao-field"><div class="fracao-lbl">Lote Forn.</div><div class="fracao-val mono">${f.loteForn||'—'}</div></div>
+        <div class="fracao-field"><div class="fracao-lbl">Lote IMAC</div><div class="fracao-val mono" style="font-size:11px">${f.loteImac||'—'}</div></div>
+        <div class="fracao-field"><div class="fracao-lbl">Fabricação</div><div class="fracao-val">${fmtD(f.fab)}</div></div>
+        <div class="fracao-field"><div class="fracao-lbl">Validade</div><div class="fracao-val destaque">${fmtD(f.val)}</div></div>
+        <div class="fracao-field"><div class="fracao-lbl">Aberto em</div><div class="fracao-val">${fmtD(f.abertura)}</div></div>
+        ${isFechada ? `<div class="fracao-field"><div class="fracao-lbl">Fechado em</div><div class="fracao-val">${fmtD(new Date(f.fechamento).toISOString().split('T')[0])}</div></div>` : ''}
+      </div>
+      ${f.obs ? `<div class="dias-aberta">💬 ${f.obs}</div>` : ''}
+      <div class="fracao-footer">
+        <button class="btn-sm danger" onclick="confirmarExcluir('${f.key}')">🗑 Excluir</button>
+        ${!isFechada ? `<button class="btn-sm ok" onclick="confirmarFechar('${f.key}')">✓ Fechar</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Resumo e badge ────────────────────────────────────────────────
+function atualizarResumo() {
+  const abertas  = Object.values(fracoes).filter(f => f.status !== 'fechada');
+  const vencidas = abertas.filter(f => statusValidade(f.val) === 'vencida').length;
+  const vencendo = abertas.filter(f => ['vence-hoje','vence-breve'].includes(statusValidade(f.val))).length;
+  document.getElementById('res-abertas').textContent = abertas.length;
+  document.getElementById('res-vencendo').textContent = vencendo;
+  document.getElementById('res-vencidas').textContent = vencidas;
+}
+
+function atualizarBadge() {
+  const urgentes = Object.values(fracoes).filter(f => {
+    if (f.status === 'fechada') return false;
+    const vs = statusValidade(f.val);
+    return vs === 'vencida' || vs === 'vence-hoje';
+  }).length;
+  const badge = document.getElementById('badge-abertas');
+  badge.textContent = urgentes || Object.values(fracoes).filter(f=>f.status!=='fechada').length;
+  badge.style.background = urgentes > 0 ? 'var(--red)' : '#43c59e';
+}
+
+// ── Navegação ─────────────────────────────────────────────────────
+function showTab(nome) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', ['abertas','registrar','hist'][i] === nome);
+  });
+  ['tab-abertas','tab-registrar','tab-hist'].forEach(id => {
+    document.getElementById(id).classList.toggle('active', id === 'tab-' + nome);
+  });
+  if (nome === 'hist') renderHistorico();
+}
+
+// ── Modal ─────────────────────────────────────────────────────────
+function abrirModal(title, sub, btns) {
+  document.getElementById('modal-title').innerHTML = title;
+  document.getElementById('modal-sub').innerHTML   = sub;
+  document.getElementById('modal-btns').innerHTML  = btns.map(b =>
+    `<button class="${b.cls}" onclick="(${b.fn})()">${b.label}</button>`
+  ).join('');
+  document.getElementById('modal').style.display = 'flex';
+}
+function fecharModal() { document.getElementById('modal').style.display = 'none'; }
+
+// ── Toast ─────────────────────────────────────────────────────────
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'show';
+  setTimeout(() => el.className = '', 2500);
+}
+</script>
+</body>
+</html>
