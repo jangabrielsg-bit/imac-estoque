@@ -107,132 +107,186 @@ function processarJob(dados) {
 }
 
 function imprimirEtiqueta(d) {
-  // Gera QR em alta resolução (200px) para melhor qualidade na impressão térmica
-  const div = document.createElement('div');
-  div.style.cssText = 'position:fixed;top:-9999px;left:-9999px;visibility:hidden';
-  document.body.appendChild(div);
+  // 90×50mm — sem QR code — fontes grandes e nítidas
+  const dataHoje = new Date().toLocaleDateString('pt-BR');
 
-  const qrData = [d.loteImac, (d.produto||'').slice(0,20), d.loteForn, d.validade].join('|');
+  // Gera data de entrada em BR se vier em ISO
+  function fmtD(s) {
+    if (!s) return '—';
+    if (s.includes('/')) return s;
+    const [y,m,dia] = s.split('-');
+    return dia + '/' + m + '/' + y;
+  }
 
-  new QRCode(div, {
-    text: qrData || 'IMAC',
-    width: 200, height: 200,
-    colorDark: '#000000', colorLight: '#ffffff',
-    correctLevel: QRCode.CorrectLevel.M
-  });
-
-  // 600ms garante que o canvas do QR renderizou completamente
-  setTimeout(() => {
-    const canvas = div.querySelector('canvas');
-    const qrSrc  = canvas ? canvas.toDataURL('image/png', 1.0) : '';
-    document.body.removeChild(div);
-
-    // ── HTML da etiqueta ─────────────────────────────────────────────
-    // Correções aplicadas:
-    //  • @page fora do @media print (funciona em todos os browsers)
-    //  • html E body com overflow:hidden e altura fixa em 72mm
-    //  • Layout 100% flexbox (sem position:absolute que extravasa a página)
-    //  • -webkit-print-color-adjust para cores corretas
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
-@page { size: 72mm 72mm; margin: 0; }
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+/* ── Página: 90×50mm sem margem ── */
+@page {
+  size: 90mm 50mm;
+  margin: 0;
+}
+
+/* ── Reset total + prevenção de segunda página ── */
+*, *::before, *::after {
+  margin: 0; padding: 0; box-sizing: border-box;
+  page-break-before: avoid !important;
+  page-break-after:  avoid !important;
+  page-break-inside: avoid !important;
+  break-before: avoid !important;
+  break-after:  avoid !important;
+  break-inside: avoid !important;
+}
+
 html {
-  width: 72mm; height: 72mm;
+  width: 90mm; height: 50mm;
+  max-width: 90mm; max-height: 50mm;
   overflow: hidden;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
+
 body {
   font-family: Arial, Helvetica, sans-serif;
-  width: 72mm; height: 72mm;
+  width: 90mm; height: 50mm;
+  max-width: 90mm; max-height: 50mm;
   overflow: hidden;
-  color: #000; background: #fff;
+  background: #fff; color: #000;
   display: flex; flex-direction: column;
-  padding: 2.5mm;
+  padding: 1.2mm 2mm 1.2mm 2mm;
   page-break-after: avoid;
   break-after: avoid;
 }
-.emp { font-size: 6.5pt; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .04em; border-bottom: 1px solid #000; padding-bottom: 1mm;
-  margin-bottom: 1.5mm; display: flex; justify-content: space-between; flex-shrink: 0; }
-.content { display: flex; gap: 2.5mm; flex: 1; min-height: 0; overflow: hidden; }
-.info { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
-.prod { font-size: 10.5pt; font-weight: 700; line-height: 1.15;
-  text-transform: uppercase; word-break: break-word;
-  margin-bottom: 1.2mm; flex-shrink: 0; }
-.lote-tag { background: #000; color: #fff; font-size: 7.5pt; font-weight: 700;
-  font-family: 'Courier New', monospace; padding: 0.3mm 1.5mm;
-  border-radius: 1px; display: inline-block; margin-bottom: 1.5mm; flex-shrink: 0; }
-.rows { flex: 1; overflow: hidden; }
-.r { display: flex; margin-bottom: 0.85mm; font-size: 7pt; line-height: 1.25; }
-.k { font-weight: 700; color: #555; width: 48px; flex-shrink: 0; font-size: 6pt; }
-.v { color: #000; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.v.val { font-size: 8.5pt; font-weight: 700; }
-.qr-b { width: 22mm; flex-shrink: 0; display: flex; flex-direction: column;
-  align-items: center; gap: 1mm; padding-top: 0.5mm; }
-.qr-b img { width: 21mm; height: 21mm; display: block; image-rendering: pixelated; }
-.qc { font-size: 5.5pt; text-align: center; font-weight: 700;
-  font-family: 'Courier New', monospace; color: #333; line-height: 1.3; }
-.foot { border-top: 1px solid #000; padding-top: 1mm; margin-top: 1.5mm;
-  font-size: 6.5pt; display: flex; justify-content: space-between; flex-shrink: 0; }
+
+/* ── Cabeçalho ── */
+.header {
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1.5pt solid #000; padding-bottom: 0.8mm; margin-bottom: 1.2mm;
+  flex-shrink: 0;
+}
+.empresa { font-size: 7pt; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+.tipo    { font-size: 6.5pt; font-weight: 700; color: #333; }
+
+/* ── Nome do produto ── */
+.produto {
+  font-size: 15pt; font-weight: 900; line-height: 1.1;
+  text-transform: uppercase; letter-spacing: .01em;
+  flex-shrink: 0; margin-bottom: 0.8mm;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ── Lote IMAC em destaque ── */
+.lote-bloco {
+  display: flex; align-items: center; gap: 3mm;
+  margin-bottom: 1.5mm; flex-shrink: 0;
+}
+.lote-label { font-size: 6pt; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: .05em; }
+.lote-val {
+  background: #000; color: #fff;
+  font-size: 9pt; font-weight: 700; font-family: 'Courier New', monospace;
+  padding: 0.5mm 2mm; letter-spacing: .04em;
+}
+
+/* ── Grade de campos (2 colunas) ── */
+.grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  column-gap: 4mm; row-gap: 1mm;
+  flex: 1; min-height: 0; overflow: hidden;
+}
+.campo { display: flex; flex-direction: column; min-width: 0; }
+.campo-lbl {
+  font-size: 5.5pt; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .04em; color: #666; line-height: 1;
+}
+.campo-val {
+  font-size: 8.5pt; font-weight: 700; color: #000; line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.campo-val.destaque { font-size: 10pt; font-weight: 900; }
+
+/* ── Rodapé ── */
+.footer {
+  border-top: 1pt solid #000; padding-top: 0.8mm; margin-top: 1mm;
+  display: flex; justify-content: space-between; align-items: center;
+  flex-shrink: 0;
+}
+.footer span { font-size: 6.5pt; color: #333; font-weight: 600; }
 </style>
 </head>
 <body>
-<div class="emp"><span>IMAC — Controle de Estoque</span><span>Rastreabilidade</span></div>
-<div class="content">
-  <div class="info">
-    <div class="prod">${d.produto || '—'}</div>
-    <div class="lote-tag">${d.loteImac || '—'}</div>
-    <div class="rows">
-      <div class="r"><span class="k">Lote forn.</span><span class="v">${d.loteForn || '—'}</span></div>
-      <div class="r"><span class="k">NF</span><span class="v">${d.nf || '—'}</span></div>
-      ${d.fornecedor ? '<div class="r"><span class="k">Fornecedor</span><span class="v">' + d.fornecedor + '</span></div>' : ''}
-      <div class="r"><span class="k">Validade</span><span class="v val">${d.validade || '—'}</span></div>
-      ${d.quantidade ? '<div class="r"><span class="k">Qtd.</span><span class="v">' + d.quantidade + '</span></div>' : ''}
-      ${d.endereco ? '<div class="r"><span class="k">Local</span><span class="v">' + d.endereco + '</span></div>' : ''}
-      <div class="r"><span class="k">Entrada</span><span class="v">${d.dataRec || '—'}</span></div>
-      ${d.responsavel ? '<div class="r"><span class="k">Operador</span><span class="v">' + d.responsavel + '</span></div>' : ''}
-    </div>
+
+<div class="header">
+  <span class="empresa">IMAC — Controle de Estoque</span>
+  <span class="tipo">Rastreabilidade de Insumos</span>
+</div>
+
+<div class="produto">${d.produto || '—'}</div>
+
+<div class="lote-bloco">
+  <span class="lote-label">Lote IMAC</span>
+  <span class="lote-val">${d.loteImac || '—'}</span>
+</div>
+
+<div class="grid">
+  <div class="campo">
+    <div class="campo-lbl">Lote Fornecedor</div>
+    <div class="campo-val">${d.loteForn || '—'}</div>
   </div>
-  <div class="qr-b">
-    ${qrSrc ? '<img src="' + qrSrc + '" alt="QR">' : ''}
-    <div class="qc">LOTE IMAC<br>${d.loteImac ? d.loteImac.slice(-6) : '—'}</div>
+  <div class="campo">
+    <div class="campo-lbl">Nota Fiscal</div>
+    <div class="campo-val">${d.nf || '—'}</div>
+  </div>
+  <div class="campo">
+    <div class="campo-lbl">Fornecedor</div>
+    <div class="campo-val">${(d.fornecedor || '—').slice(0,22)}</div>
+  </div>
+  <div class="campo">
+    <div class="campo-lbl">Validade</div>
+    <div class="campo-val destaque">${d.validade || '—'}</div>
+  </div>
+  <div class="campo">
+    <div class="campo-lbl">Quantidade</div>
+    <div class="campo-val">${d.quantidade || '—'}</div>
+  </div>
+  <div class="campo">
+    <div class="campo-lbl">Endereço / Local</div>
+    <div class="campo-val">${d.endereco || '—'}</div>
   </div>
 </div>
-<div class="foot">
-  <span>IMAC · Rastreabilidade</span>
-  <span>${new Date().toLocaleDateString('pt-BR')}</span>
+
+<div class="footer">
+  <span>${d.responsavel ? 'Op: ' + d.responsavel + '  ·  ' : ''}IMAC · Rastreabilidade</span>
+  <span>Entrada: ${fmtD(d.dataRec)}  ·  Impresso: ${dataHoje}</span>
 </div>
+
 <script>
-  // Aguarda a imagem do QR carregar antes de imprimir
-  var img = document.querySelector('img');
-  if (img && !img.complete) {
-    img.onload = function() { setTimeout(function(){ window.print(); }, 200); };
-    img.onerror = function() { setTimeout(function(){ window.print(); }, 200); };
-  } else {
-    setTimeout(function(){ window.print(); }, 300);
-  }
+  // Aguarda DOM pronto e imprime
+  (function() {
+    function doprint() {
+      // Força o layout a 90x50mm antes de imprimir
+      document.documentElement.style.width  = '90mm';
+      document.documentElement.style.height = '50mm';
+      document.body.style.width  = '90mm';
+      document.body.style.height = '50mm';
+      window.print();
+    }
+    if (document.readyState === 'complete') { setTimeout(doprint, 200); }
+    else { window.onload = function() { setTimeout(doprint, 200); }; }
+  })();
 <\/script>
 </body></html>`;
 
-    // ── Blob URL: abre direto no conteúdo (sem página em branco inicial) ──
-    // window.open('', '_blank') → cria janela em branco → browser conta como pág 1
-    // URL.createObjectURL(blob) → janela abre JÁ no conteúdo → 1 página apenas
-    const blob    = new Blob([html], { type: 'text/html; charset=utf-8' });
-    const blobUrl = URL.createObjectURL(blob);
+  // Blob URL: abre direto no conteúdo, sem página em branco inicial
+  const blob    = new Blob([html], { type: 'text/html; charset=utf-8' });
+  const blobUrl = URL.createObjectURL(blob);
+  const w       = window.open(blobUrl, '_blank', 'width=10,height=10,left=-500,top=-500');
 
-    const w = window.open(blobUrl, '_blank', 'width=10,height=10,left=-200,top=-200');
-    if (!w) {
-      addLog('ERRO: Pop-ups bloqueados! Vá em Configurações do Chrome → Sites → Pop-ups e ative.', 'err');
-      URL.revokeObjectURL(blobUrl);
-      return;
-    }
+  if (!w) {
+    addLog('ERRO: Pop-ups bloqueados. Acesse chrome://settings/content/popups e adicione localhost.', 'err');
+    URL.revokeObjectURL(blobUrl);
+    return;
+  }
 
-    // Revoga a URL após 15 segundos (memória)
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
-
-  }, 600);
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
 }
 </script>
 </body>
