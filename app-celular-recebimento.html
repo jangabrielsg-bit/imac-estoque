@@ -2,133 +2,338 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>IMAC — Recebimento</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<title>IMAC — Servidor de Impressão</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f5;color:#1a1a2e;padding:24px;font-size:14px}
+.card{background:#fff;border-radius:12px;padding:24px;margin-bottom:16px;border:1px solid #dde3ee}
+h1{font-size:18px;font-weight:700;margin-bottom:4px}
+.sub{font-size:13px;color:#6b7a99;margin-bottom:20px}
+.status{padding:12px 16px;border-radius:8px;font-weight:600;margin-bottom:12px;font-size:14px}
+.ok{background:#f0fdf8;color:#1a4a3a;border:1.5px solid #43c59e}
+.err{background:#fef2f2;color:#7f1d1d;border:1.5px solid #ef5350}
+.warn{background:#fffbeb;color:#78350f;border:1.5px solid #f59e0b}
+.log{background:#1a1a2e;color:#4fc3f7;padding:16px;border-radius:8px;font-family:'Courier New',monospace;font-size:12px;height:260px;overflow-y:auto;line-height:1.7}
+.log .ts{color:#90a0b0}
+.log .ok{color:#43c59e}
+.log .err{color:#ef5350}
+.log .warn{color:#f59e0b}
+.status-box-fb{background:#f8f9fc;border:1px solid #dde3ee;border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:12px}
+.badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#e3f8f1;color:#1a4a3a;margin-left:8px}
+.counter{display:flex;gap:16px;margin-top:12px}
+.cnt{background:#f8f9fc;border:1px solid #dde3ee;border-radius:8px;padding:10px 16px;flex:1;text-align:center}
+.cnt-num{font-size:24px;font-weight:700;color:#1a1a2e}
+.cnt-lbl{font-size:11px;color:#6b7a99;text-transform:uppercase;letter-spacing:.05em}
+</style>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
-
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --navy:#1a1a2e; --blue:#4fc3f7; --green:#43c59e; --red:#ef5350; --gray:#6b7a99; --light:#f0f2f5; --border:#dde3ee;
-}
-body{font-family:'Segoe UI',Arial,sans-serif;background:var(--light);color:var(--navy);min-height:100vh;font-size:15px}
-header{background:var(--navy);color:#fff;padding:0 16px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
-.logo{font-size:17px;font-weight:700;letter-spacing:.03em}
-.logo span{color:var(--blue)}
-.tabs{display:flex;background:#fff;border-bottom:2px solid var(--border);position:sticky;top:52px;z-index:100}
-.tab{flex:1;padding:13px 8px;text-align:center;font-size:13px;font-weight:600;color:var(--gray);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
-.tab.active{color:var(--navy);border-bottom-color:var(--blue)}
-.screen{display:none;padding:16px}
-.screen.active{display:block}
-.card{background:#fff;border-radius:12px;padding:20px;margin-bottom:14px;border:1px solid var(--border)}
-.card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);margin-bottom:16px;display:flex;align-items:center;gap:8px}
-.card-title::before{content:'';display:block;width:3px;height:13px;background:var(--blue);border-radius:2px}
-#reader{width:100%;border-radius:10px;overflow:hidden;background:#000;min-height:200px}
-.scan-result{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#f0fdf8;border:1.5px solid var(--green);border-radius:8px;margin-top:10px;font-size:13px;font-weight:600;color:#1a4a3a;font-family:monospace}
-.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
-label{font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.05em}
-input{border:1.5px solid var(--border);border-radius:8px;padding:11px 14px;font-size:15px;color:var(--navy);background:#fff;width:100%}
-input:focus{outline:none;border-color:var(--blue);background:#f8fdff}
-.btn{border:none;border-radius:10px;padding:14px 20px;font-size:15px;font-weight:600;cursor:pointer;width:100%;display:block;text-align:center}
-.btn-primary{background:var(--navy);color:#fff}
-.btn-green{background:var(--green);color:#fff}
-.btn-outline{background:#fff;color:var(--gray);border:1.5px solid var(--border)}
-.btn:disabled{opacity:.45;cursor:not-allowed}
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:13px 22px;border-radius:10px;font-size:14px;opacity:0;transition:all .25s;z-index:999}
-#toast.show{opacity:1}
-
-/* ESTILOS DO HISTÓRICO */
-.hist-item{padding:14px 0;border-bottom:1px solid #f0f2f5;display:flex;flex-direction:column;gap:4px}
-.hist-item:last-child{border-bottom:none}
-.hist-lote{font-family:monospace;font-size:13px;font-weight:700;color:var(--navy)}
-.hist-prod{font-size:15px;font-weight:600;color:var(--navy)}
-.hist-meta{font-size:12px;color:var(--gray)}
-.hist-actions{display:flex;gap:8px;margin-top:6px}
-.btn-sm{border:1.5px solid var(--border);border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:var(--gray);transition:all .15s}
-.btn-sm.blue{border-color:var(--blue);color:var(--blue)}
-.btn-sm.blue:hover{background:#e8f7fe}
-</style>
 </head>
 <body>
 
-<header>
-  <div class="logo">IMAC <span>·</span> Estoque</div>
-  <div style="font-size:11px;color:#43c59e" id="status-fb">Nuvem Conectada</div>
-</header>
+<div class="card">
+  <h1>IMAC — Servidor de Impressão <span class="badge" id="badge-status">Iniciando...</span></h1>
+  <div class="sub">Deixe esta janela aberta. O Chrome deve ser iniciado com <code>--kiosk-printing</code> para impressão sem diálogo.</div>
 
-<div class="tabs">
-  <div class="tab active" onclick="showTab('scan')">📷 Bipar</div>
-  <div class="tab" onclick="showTab('form')">📝 Dados</div>
-  <div class="tab" onclick="showTab('hist')">📋 Histórico</div>
-  <div class="tab" onclick="showTab('cfg')">⚙️ Config</div>
-</div>
+  <div id="status-box" class="status warn">⏳ Conectando ao Firebase...</div>
 
-<div class="screen active" id="tab-scan">
-  <div class="card">
-    <div class="card-title">Bipar mercadoria</div>
-    <div id="reader"></div>
-    <div id="scan-result" style="display:none" class="scan-result">✓ <span id="scan-text">—</span></div>
-    <button class="btn btn-primary" style="margin-top:12px" id="btn-iniciar" onclick="iniciarScanner()">Iniciar câmera</button>
+  <div class="status-box-fb">
+    Firebase: <strong>etiquetas-84828</strong> &nbsp;·&nbsp;
+    Status: <span id="fb-status" style="font-weight:700;color:#f59e0b">Desconectado</span>
+    <br><small style="color:#6b7a99;font-size:11px">Método de impressão: iframe oculto + window.print() com kiosk-printing</small>
   </div>
-  <button class="btn btn-green" onclick="showTab('form')" id="btn-ir-form" disabled>Preencher dados →</button>
-</div>
 
-<div class="screen" id="tab-form">
-  <div class="card">
-    <div class="card-title">Informações do produto</div>
-    <div class="field"><label>Produto / Descrição *</label><input type="text" id="produto"></div>
-    <div class="field"><label>Fornecedor</label><input type="text" id="fornecedor"></div>
-  </div>
-  <div class="card">
-    <div class="card-title">Dados do lote e nota</div>
-    <div class="field"><label>Nº da Nota Fiscal *</label><input type="text" id="nf" inputmode="numeric"></div>
-    <div class="field"><label>Lote do fornecedor *</label><input type="text" id="lote-forn"></div>
-    <div class="field"><label>Validade *</label><input type="date" id="validade"></div>
-    <div class="field"><label>Data de recebimento</label><input type="date" id="data-rec"></div>
-  </div>
-  <div class="card">
-    <div class="card-title">Estoque</div>
-    <div class="field"><label>Quantidade recebida</label><input type="text" id="quantidade"></div>
-    <div class="field"><label>Endereçamento</label><input type="text" id="endereco"></div>
-    <div class="field"><label>Responsável</label><input type="text" id="responsavel"></div>
-  </div>
-  <div class="card">
-    <div class="card-title">Cópias</div>
-    <div class="field"><label>Quantidade de etiquetas</label><input type="number" id="qtd-etiquetas" value="1" min="1"></div>
-  </div>
-  <button class="btn btn-green" onclick="dispararFila()">🖨 Enviar para Impressão</button>
-</div>
-
-<div class="screen" id="tab-hist">
-  <div class="card">
-    <div class="card-title">Últimos Recebimentos</div>
-    <div id="historico-lista">
-      <div style="text-align:center;padding:32px;color:var(--gray);font-size:13px">Nenhum recebimento ainda.</div>
-    </div>
+  <div class="counter">
+    <div class="cnt"><div class="cnt-num" id="cnt-ok">0</div><div class="cnt-lbl">Impressas</div></div>
+    <div class="cnt"><div class="cnt-num" id="cnt-skip">0</div><div class="cnt-lbl">Ignoradas (dup)</div></div>
+    <div class="cnt"><div class="cnt-num" id="cnt-err">0</div><div class="cnt-lbl">Erros</div></div>
   </div>
 </div>
 
-<div class="screen" id="tab-cfg">
-  <div class="card">
-    <div class="card-title">Configuração</div>
-    <p style="font-size:13px;color:var(--gray)">O aplicativo celular está pareado com a nuvem. Toda impressão enviada aqui cai direto no servidor Node do PC.</p>
+<div class="card">
+  <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:#6b7a99;text-transform:uppercase;letter-spacing:.05em">Log de impressões</div>
+  <div class="log" id="log">
+    <span class="ts">[sistema]</span> Iniciando monitoramento...<br>
   </div>
 </div>
 
-<div id="toast"></div>
+<!-- INSTRUÇÃO DE USO -->
+<div class="card" style="font-size:13px;color:#6b7a99;line-height:1.8">
+  <strong style="color:#1a1a2e">Como usar sem diálogo de impressão:</strong><br>
+  1. Abra o Chrome com o atalho: <code style="background:#f0f2f5;padding:1px 6px;border-radius:4px">chrome.exe --kiosk-printing</code><br>
+  2. Acesse este arquivo normalmente dentro do Chrome com kiosk<br>
+  3. Defina a Zebra como impressora padrão do Windows<br>
+  4. O tamanho de papel "90 x 50 mm" deve estar salvo nas preferências da Zebra<br>
+  <br>
+  <strong style="color:#1a1a2e">Atalho de inicialização sugerido (Target do atalho):</strong><br>
+  <code style="background:#f0f2f5;padding:2px 8px;border-radius:4px;font-size:11px">
+    "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk-printing --start-maximized "file:///C:/imac-impressao/servidor-impressao-pc.html"
+  </code>
+</div>
 
 <script>
-let codigoAtual = '';
-let scanner = null;
-let scannerAtivo = false;
+// ── Contadores ────────────────────────────────────────────────
+let cntOk = 0, cntSkip = 0, cntErr = 0;
+function atualizarContadores() {
+  document.getElementById('cnt-ok').textContent   = cntOk;
+  document.getElementById('cnt-skip').textContent = cntSkip;
+  document.getElementById('cnt-err').textContent  = cntErr;
+}
 
-// Carrega o histórico salvo no celular (ou inicia vazio caso não exista)
-let historico = JSON.parse(localStorage.getItem('imac-rec-hist') || '[]');
+// ── Log ───────────────────────────────────────────────────────
+const logEl = document.getElementById('log');
+function addLog(msg, tipo = '') {
+  const ts = new Date().toLocaleTimeString('pt-BR');
+  logEl.innerHTML += `<span class="ts">[${ts}]</span> <span class="${tipo}">${msg}</span><br>`;
+  logEl.scrollTop = logEl.scrollHeight;
+}
 
+// ── Deduplicação: jobs já processados nesta sessão ────────────
+//    Usamos sessionStorage para sobreviver a F5 mas não a reabrir a aba
+const STORAGE_KEY = 'imac-jobs-processados';
+function getJobsProcessados() {
+  try { return new Set(JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '[]')); }
+  catch (_) { return new Set(); }
+}
+function salvarJobsProcessados(set) {
+  const arr = [...set];
+  // Mantém apenas os últimos 200
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(arr.slice(-200)));
+}
+
+let jobsProcessados = getJobsProcessados();
+
+function jaProcessado(jobId) { return jobsProcessados.has(jobId); }
+function marcarProcessado(jobId) {
+  jobsProcessados.add(jobId);
+  salvarJobsProcessados(jobsProcessados);
+}
+
+// ── Formata data ISO → BR ─────────────────────────────────────
+function fmtD(s) {
+  if (!s) return '—';
+  if (s.includes('/')) return s;
+  const [y, m, d] = s.split('-');
+  return d + '/' + m + '/' + y;
+}
+
+// ── Fila de impressão (processa um por vez) ───────────────────
+let filaLocal = [];
+let imprimindo = false;
+
+function enfileirar(job) {
+  filaLocal.push(job);
+  if (!imprimindo) processarProximo();
+}
+
+function processarProximo() {
+  if (!filaLocal.length) { imprimindo = false; return; }
+  imprimindo = true;
+  const job = filaLocal.shift();
+  imprimirEtiqueta(job, () => {
+    // Aguarda 1.5s entre impressões para não travar o spooler
+    setTimeout(processarProximo, 1500);
+  });
+}
+
+// ── Geração do HTML da etiqueta (90×50mm) ─────────────────────
+function gerarHTMLEtiqueta(d) {
+  const dataHoje = new Date().toLocaleDateString('pt-BR');
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>
+@page { size: 90mm 50mm; margin: 0; }
+*, *::before, *::after {
+  margin: 0; padding: 0; box-sizing: border-box;
+  page-break-before: avoid !important;
+  page-break-after:  avoid !important;
+  break-before: avoid !important;
+  break-after:  avoid !important;
+}
+html, body {
+  width: 90mm; height: 50mm;
+  max-width: 90mm; max-height: 50mm;
+  overflow: hidden;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #fff; color: #000;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+body {
+  display: flex; flex-direction: column;
+  padding: 1.2mm 2mm;
+}
+.header {
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1.5pt solid #000;
+  padding-bottom: 0.8mm; margin-bottom: 1mm;
+  flex-shrink: 0;
+}
+.empresa { font-size: 7pt; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+.tipo    { font-size: 6pt; font-weight: 700; color: #333; }
+.produto {
+  font-size: 14pt; font-weight: 900; line-height: 1.1;
+  text-transform: uppercase;
+  flex-shrink: 0; margin-bottom: 0.8mm;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lote-bloco {
+  display: flex; align-items: center; gap: 3mm;
+  margin-bottom: 1.2mm; flex-shrink: 0;
+}
+.lote-label { font-size: 5.5pt; font-weight: 700; color: #555; text-transform: uppercase; }
+.lote-val {
+  background: #000; color: #fff;
+  font-size: 8.5pt; font-weight: 700; font-family: 'Courier New', monospace;
+  padding: 0.4mm 2mm; letter-spacing: .04em;
+}
+.grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  column-gap: 3mm; row-gap: 0.8mm;
+  flex: 1; min-height: 0; overflow: hidden;
+}
+.campo { display: flex; flex-direction: column; min-width: 0; }
+.campo-lbl {
+  font-size: 5pt; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .04em; color: #666; line-height: 1;
+}
+.campo-val {
+  font-size: 8pt; font-weight: 700; color: #000; line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.campo-val.destaque { font-size: 9.5pt; font-weight: 900; }
+.footer {
+  border-top: 1pt solid #000; padding-top: 0.6mm; margin-top: 0.8mm;
+  display: flex; justify-content: space-between; align-items: center;
+  flex-shrink: 0;
+}
+.footer span { font-size: 5.5pt; color: #444; font-weight: 600; }
+</style>
+</head><body>
+
+<div class="header">
+  <span class="empresa">IMAC — Controle de Estoque</span>
+  <span class="tipo">Rastreabilidade de Insumos</span>
+</div>
+
+<div class="produto">${d.produto || '—'}</div>
+
+<div class="lote-bloco">
+  <span class="lote-label">Lote IMAC</span>
+  <span class="lote-val">${d.loteImac || '—'}</span>
+</div>
+
+<div class="grid">
+  <div class="campo">
+    <div class="campo-lbl">Lote Fornecedor</div>
+    <div class="campo-val">${d.loteForn || '—'}</div>
+  </div>
+  <div class="campo">
+    <div class="campo-lbl">Nota Fiscal</div>
+    <div class="campo-val">${d.nf || '—'}</div>
+  </div>
+  <div class="campo">
+    <div class="campo-lbl">Fornecedor</div>
+    <div class="campo-val">${(d.fornecedor || '—').slice(0, 22)}</div>
+  </div>
+  <div class="campo">
+    <div class="campo-lbl">Validade</div>
+    <div class="campo-val destaque">${d.validade || '—'}</div>
+  </div>
+  <div class="campo">
+    <div class="campo-lbl">Quantidade</div>
+    <div class="campo-val">${d.quantidade || '—'}</div>
+  </div>
+  <div class="campo">
+    <div class="campo-lbl">Endereço / Local</div>
+    <div class="campo-val">${d.endereco || '—'}</div>
+  </div>
+</div>
+
+<div class="footer">
+  <span>${d.responsavel ? 'Op: ' + d.responsavel + '  ·  ' : ''}IMAC · Rastreabilidade</span>
+  <span>Entrada: ${fmtD(d.dataRec)}  ·  Impresso: ${dataHoje}</span>
+</div>
+
+</body></html>`;
+}
+
+// ── Impressão via iframe oculto ───────────────────────────────
+//    IMPORTANTE: o Chrome precisa ser iniciado com --kiosk-printing
+//    para que window.print() não abra o diálogo.
+function imprimirEtiqueta(dados, callback) {
+  addLog(`Processando: ${dados.produto} — ${dados.loteImac}`, 'ok');
+
+  // Remove iframe anterior se ainda existir
+  const old = document.getElementById('frame-impressao');
+  if (old) old.remove();
+
+  const iframe = document.createElement('iframe');
+  iframe.id = 'frame-impressao';
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:90mm;height:50mm;border:none;visibility:hidden';
+  document.body.appendChild(iframe);
+
+  const iDoc = iframe.contentWindow.document;
+  iDoc.open();
+  iDoc.write(gerarHTMLEtiqueta(dados));
+  iDoc.close();
+
+  // Aguarda o iframe renderizar antes de chamar print()
+  // onload é mais confiável que setTimeout fixo
+  iframe.onload = () => {
+    try {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      cntOk++;
+      atualizarContadores();
+      addLog(`Etiqueta enviada para impressão: ${dados.loteImac}`, 'ok');
+    } catch (e) {
+      cntErr++;
+      atualizarContadores();
+      addLog(`Erro ao imprimir: ${e.message}`, 'err');
+    }
+    // Remove o iframe após 12s (tempo suficiente para o spooler pegar)
+    setTimeout(() => { if (iframe.parentNode) iframe.remove(); }, 12000);
+    if (callback) callback();
+  };
+
+  // Fallback: se onload não disparar (pode acontecer com iframes em file://)
+  setTimeout(() => {
+    if (!iframe.dataset.loaded) {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        cntOk++;
+        atualizarContadores();
+        addLog(`Etiqueta enviada (fallback timeout): ${dados.loteImac}`, 'warn');
+      } catch (e) {
+        cntErr++;
+        atualizarContadores();
+        addLog(`Erro no fallback: ${e.message}`, 'err');
+      }
+      setTimeout(() => { if (iframe.parentNode) iframe.remove(); }, 12000);
+      if (callback) callback();
+    }
+  }, 600);
+
+  iframe.onload = () => {
+    iframe.dataset.loaded = '1';
+    try {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      cntOk++;
+      atualizarContadores();
+      addLog(`Etiqueta enviada: ${dados.loteImac}`, 'ok');
+    } catch (e) {
+      cntErr++;
+      atualizarContadores();
+      addLog(`Erro ao imprimir: ${e.message}`, 'err');
+    }
+    setTimeout(() => { if (iframe.parentNode) iframe.remove(); }, 12000);
+    if (callback) callback();
+  };
+}
+
+// ── Firebase ──────────────────────────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyCgniZ8fVNdmbzkyfOKGrfXjcKhvX-OIhI",
   authDomain: "etiquetas-84828.firebaseapp.com",
@@ -139,136 +344,68 @@ const firebaseConfig = {
   databaseURL: "https://etiquetas-84828-default-rtdb.firebaseio.com"
 };
 
-firebase.initializeApp(firebaseConfig);
-const database = firebase.database();
+try {
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
 
-document.getElementById('data-rec').value = new Date().toISOString().split('T')[0];
-
-function showTab(nome) {
-  document.querySelectorAll('.tab').forEach((t, i) => {
-    t.classList.toggle('active', ['scan','form','hist','cfg'][i] === nome);
+  // Monitor de conexão
+  database.ref('.info/connected').on('value', (snap) => {
+    const conectado = snap.val() === true;
+    document.getElementById('fb-status').textContent  = conectado ? 'Conectado' : 'Desconectado';
+    document.getElementById('fb-status').style.color  = conectado ? '#43c59e' : '#ef5350';
+    document.getElementById('status-box').className   = 'status ' + (conectado ? 'ok' : 'err');
+    document.getElementById('status-box').textContent = conectado
+      ? '✓ Servidor ativo — Aguardando comandos do celular'
+      : '❌ Desconectado do Firebase. Verifique a internet.';
+    document.getElementById('badge-status').textContent = conectado ? 'Online' : 'Offline';
+    if (conectado) addLog('Conectado ao Firebase Realtime Database.', 'ok');
   });
-  ['tab-scan','tab-form','tab-hist','tab-cfg'].forEach(id => document.getElementById(id).style.display = 'none');
-  document.getElementById('tab-' + nome).style.display = 'block';
-  
-  if(nome !== 'scan') pararScanner();
-  if(nome === 'hist') renderHistorico();
-}
 
-function iniciarScanner() {
-  if (scannerAtivo) { pararScanner(); return; }
-  document.getElementById('btn-iniciar').textContent = 'Parar Câmera';
-  scanner = new Html5Qrcode("reader");
-  scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, 
-    txt => {
-      codigoAtual = txt;
-      document.getElementById('scan-result').style.display = 'flex';
-      document.getElementById('scan-text').textContent = txt;
-      document.getElementById('btn-ir-form').disabled = false;
-      pararScanner();
-    }, 
-    () => {}
-  ).then(() => scannerAtivo = true);
-}
+  // ── Listener da fila ──────────────────────────────────────
+  database.ref('imac-fila-impressao').on('child_added', (snapshot) => {
+    const job   = snapshot.val();
+    const jobId = snapshot.key;
+    if (!job || !jobId) return;
 
-function pararScanner() {
-  if (scanner && scannerAtivo) { scanner.stop().catch(()=>{}); scannerAtivo = false; }
-  document.getElementById('btn-iniciar').textContent = 'Iniciar câmera';
-}
+    // Deduplicação: transaction no Firebase garante que apenas UMA
+    // instância do servidor (aba) processa cada job
+    database.ref('imac-fila-impressao/' + jobId).transaction(
+      (current) => {
+        // Se já foi removido (null) ou processado, não faz nada (retorna undefined)
+        if (current === null) return undefined;
+        // Caso contrário, remove o nó (retorna null)
+        return null;
+      },
+      (error, committed) => {
+        if (error) {
+          addLog(`Erro na transação do job ${jobId}: ${error.message}`, 'err');
+          return;
+        }
+        if (!committed) {
+          // Outro processo/aba pegou este job antes
+          cntSkip++;
+          atualizarContadores();
+          addLog(`Job ${jobId} ignorado (já processado por outra instância).`, 'warn');
+          return;
+        }
+        // Este servidor ganhou a corrida — processa
+        if (jaProcessado(jobId)) {
+          cntSkip++;
+          atualizarContadores();
+          addLog(`Job ${jobId} ignorado (já processado nesta sessão).`, 'warn');
+          return;
+        }
+        marcarProcessado(jobId);
+        addLog(`Recebido: ${job.produto} — ${job.loteImac}`, 'ok');
+        enfileirar(job);
+      }
+    );
+  });
 
-function v(id){ return (document.getElementById(id).value || '').trim(); }
-
-function dispararFila() {
-  if(!v('produto') || !v('nf') || !v('lote-forn') || !v('validade')){
-    alert('Preencha os campos obrigatórios!'); return;
-  }
-
-  const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  const rand = Math.floor(1000 + Math.random() * 9000);
-  const loteImac = `IMAC-${yyyy}${mm}${dd}-${rand}`;
-
-  const pacote = {
-    loteImac,
-    produto: v('produto'),
-    fornecedor: v('fornecedor'),
-    nf: v('nf'),
-    loteForn: v('lote-forn'),
-    validade: fmtD(v('validade')),
-    dataRec: fmtD(v('data-rec')),
-    quantidade: v('quantidade'),
-    endereco: v('endereco'),
-    responsavel: v('responsavel')
-  };
-
-  const qtd = parseInt(document.getElementById('qtd-etiquetas').value) || 1;
-  
-  // Envia para a fila do Firebase de acordo com as cópias informadas
-  for(let i = 0; i < qtd; i++){
-    database.ref('imac-fila-impressao').push(pacote);
-  }
-
-  // Salva este registro no topo da lista de histórico local do dispositivo
-  historico.unshift(pacote);
-  localStorage.setItem('imac-rec-hist', JSON.stringify(historico.slice(0, 100))); // Guarda os últimos 100 itens
-
-  toast('Enviado para a Zebra!');
-  limparFormulario();
-  showTab('scan');
-}
-
-function renderHistorico() {
-  const el = document.getElementById('historico-lista');
-  if (!historico.length) {
-    el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--gray);font-size:13px">Nenhum recebimento encontrado no histórico.</div>';
-    return;
-  }
-  
-  el.innerHTML = historico.map((h, i) => `
-    <div class="hist-item">
-      <div class="hist-lote">${h.loteImac}</div>
-      <div class="hist-prod">${h.produto.toUpperCase()}</div>
-      <div class="hist-meta">NF: ${h.nf} · Val: ${h.validade} · Qtd: ${h.quantidade || '—'} · Local: ${h.endereco || '—'}</div>
-      <div class="hist-actions">
-        <button class="btn-sm blue" onclick="reimprimirLote(${i})">🖨 Reimprimir</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-function reimprimirLote(index) {
-  const pacote = historico[index];
-  if (!pacote) return;
-
-  // Pede confirmação da quantidade de cópias antes de mandar direto para o Node
-  const qtdInformada = prompt(`Deseja imprimir quantas cópias da etiqueta para o lote ${pacote.loteImac}?`, "1");
-  const qtd = parseInt(qtdInformada) || 0;
-
-  if (qtd > 0) {
-    for (let i = 0; i < qtd; i++) {
-      database.ref('imac-fila-impressao').push(pacote);
-    }
-    toast(`Reimpressão enviada! (${qtd} cóp.)`);
-  }
-}
-
-function limparFormulario() {
-  ['produto','fornecedor','nf','lote-forn','validade','quantidade','endereco','responsavel'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('btn-ir-form').disabled = true;
-  document.getElementById('scan-result').style.display = 'none';
-  document.getElementById('qtd-etiquetas').value = '1';
-}
-
-function fmtD(iso){
-  if(!iso || iso.includes('/')) return iso || '—';
-  const [y,m,d] = iso.split('-'); return `${d}/${m}/${y}`;
-}
-
-function toast(msg){
-  const el = document.getElementById('toast'); el.textContent = msg; el.className = 'show';
-  setTimeout(() => el.className = '', 2500);
+} catch (e) {
+  document.getElementById('status-box').className   = 'status err';
+  document.getElementById('status-box').textContent = '❌ Erro ao inicializar Firebase: ' + e.message;
+  addLog('Erro ao inicializar Firebase: ' + e.message, 'err');
 }
 </script>
 </body>
