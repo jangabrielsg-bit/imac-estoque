@@ -140,10 +140,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);ba
   <div class="card">
     <div class="card-title">Identificação do Insumo</div>
     <div class="field"><label>Item / Produto *</label><input type="text" id="f-item" placeholder="Ex: Farinha de Trigo Medalha de Ouro"></div>
-    <div class="grid-2">
-      <div class="field"><label>Lote Fornecedor *</label><input type="text" id="f-lote-forn" placeholder="Ex: H136"></div>
-      <div class="field"><label>Lote IMAC</label><input type="text" id="f-lote-imac" placeholder="Ex: IMAC-20260610-1234"></div>
-    </div>
+    <div class="field"><label>Lote Fornecedor *</label><input type="text" id="f-lote-forn" placeholder="Ex: H136"></div>
   </div>
   <div class="card">
     <div class="card-title">Datas</div>
@@ -384,10 +381,6 @@ function renderAbertas() {
           <div class="fracao-val mono">${f.loteForn || '—'}</div>
         </div>
         <div class="fracao-field">
-          <div class="fracao-lbl">Lote IMAC</div>
-          <div class="fracao-val mono" style="font-size:11px">${f.loteImac || '—'}</div>
-        </div>
-        <div class="fracao-field">
           <div class="fracao-lbl">Fabricação</div>
           <div class="fracao-val">${fmtD(f.fab)}</div>
         </div>
@@ -444,7 +437,6 @@ function renderHistorico() {
       </div>
       <div class="fracao-body">
         <div class="fracao-field"><div class="fracao-lbl">Lote Forn.</div><div class="fracao-val mono">${f.loteForn||'—'}</div></div>
-        <div class="fracao-field"><div class="fracao-lbl">Lote IMAC</div><div class="fracao-val mono" style="font-size:11px">${f.loteImac||'—'}</div></div>
         <div class="fracao-field"><div class="fracao-lbl">Fabricação</div><div class="fracao-val">${fmtD(f.fab)}</div></div>
         <div class="fracao-field"><div class="fracao-lbl">Validade</div><div class="fracao-val destaque">${fmtD(f.val)}</div></div>
         <div class="fracao-field"><div class="fracao-lbl">Aberto em</div><div class="fracao-val">${fmtD(f.abertura)}</div></div>

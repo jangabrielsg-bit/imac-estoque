@@ -168,8 +168,8 @@ body {
   padding-bottom: 0.8mm; margin-bottom: 1mm;
   flex-shrink: 0;
 }
-.empresa { font-size: 7pt; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; color: #000; }
-.tipo    { font-size: 6pt; font-weight: 900; color: #000; }
+.logo-img { height: 9mm; max-width: 28mm; object-fit: contain; display: block; }
+.tipo     { font-size: 6pt; font-weight: 900; color: #000; }
 
 /* ── Nome do produto ── */
 .produto {
@@ -213,7 +213,7 @@ body {
 </head><body>
 
 <div class="header">
-  <span class="empresa">IMAC — Controle de Estoque</span>
+  <img src="https://jangabrielsg-bit.github.io/imac-estoque/logo-imac.png" class="logo-img">
   <span class="tipo">Rastreabilidade de Insumos</span>
 </div>
 
@@ -240,10 +240,7 @@ body {
     <div class="campo-lbl">Quantidade</div>
     <div class="campo-val">${d.quantidade || '—'}</div>
   </div>
-  <div class="campo">
-    <div class="campo-lbl">${d.dataRecLabel || 'Entrada'}</div>
-    <div class="campo-val">${fmtD(d.dataRec) || '—'}</div>
-  </div>
+  ${d.dataRecLabel && d.dataRecLabel !== 'Entrada' ? `<div class="campo"><div class="campo-lbl">${d.dataRecLabel}</div><div class="campo-val">${fmtD(d.dataRec) || '—'}</div></div>` : ''}
   <div class="campo">
     <div class="campo-lbl">Endereço / Local</div>
     <div class="campo-val">${d.endereco || '—'}</div>
@@ -262,7 +259,7 @@ body {
 //    IMPORTANTE: o Chrome precisa ser iniciado com --kiosk-printing
 //    para que window.print() não abra o diálogo.
 function imprimirEtiqueta(dados, callback) {
-  addLog(`Processando: ${dados.produto} — ${dados.loteImac}`, 'ok');
+  addLog(`Processando: ${dados.produto}`, 'ok');
 
   // Remove iframe anterior se ainda existir
   const old = document.getElementById('frame-impressao');

@@ -88,7 +88,6 @@ input:focus{outline:none;border-color:var(--blue);background:#f8fdff}
     <div class="field"><label>Nº da Nota Fiscal *</label><input type="text" id="nf" inputmode="numeric"></div>
     <div class="field"><label>Lote do fornecedor *</label><input type="text" id="lote-forn"></div>
     <div class="field"><label>Validade *</label><input type="date" id="validade"></div>
-    <div class="field"><label>Data de recebimento</label><input type="date" id="data-rec"></div>
   </div>
   <div class="card">
     <div class="card-title">Estoque</div>
@@ -142,7 +141,6 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-document.getElementById('data-rec').value = new Date().toISOString().split('T')[0];
 
 function showTab(nome) {
   document.querySelectorAll('.tab').forEach((t, i) => {
@@ -197,7 +195,6 @@ function dispararFila() {
     nf: v('nf'),
     loteForn: v('lote-forn'),
     validade: fmtD(v('validade')),
-    dataRec: fmtD(v('data-rec')),
     quantidade: v('quantidade'),
     endereco: v('endereco'),
     responsavel: v('responsavel')
@@ -228,7 +225,7 @@ function renderHistorico() {
   
   el.innerHTML = historico.map((h, i) => `
     <div class="hist-item">
-      <div class="hist-lote">${h.loteImac}</div>
+      <div class="hist-lote">${h.nf ? 'NF ' + h.nf : h.loteForn || '—'}</div>
       <div class="hist-prod">${h.produto.toUpperCase()}</div>
       <div class="hist-meta">NF: ${h.nf} · Val: ${h.validade} · Qtd: ${h.quantidade || '—'} · Local: ${h.endereco || '—'}</div>
       <div class="hist-actions">
@@ -243,7 +240,7 @@ function reimprimirLote(index) {
   if (!pacote) return;
 
   // Pede confirmação da quantidade de cópias antes de mandar direto para o Node
-  const qtdInformada = prompt(`Deseja imprimir quantas cópias da etiqueta para o lote ${pacote.loteImac}?`, "1");
+  const qtdInformada = prompt(`Imprimir quantas cópias de "${pacote.produto}"?`, "1");
   const qtd = parseInt(qtdInformada) || 0;
 
   if (qtd > 0) {
