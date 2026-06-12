@@ -38,6 +38,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);ba
 .btn-sm:hover{background:var(--light)}
 .btn-sm.danger{border-color:#ffcdd2;color:var(--red)}
 .btn-sm.ok{border-color:#c8f0e5;color:var(--green)}
+.btn-sm.print{border-color:#b3e5fc;color:#0277bd}
+.btn-sm.print:hover{background:#e8f7fe}
 /* ── Cards de frações ── */
 .fracao-card{background:#fff;border-radius:12px;border:1px solid var(--border);margin-bottom:12px;overflow:hidden;transition:all .2s}
 .fracao-card.vencida{border-color:#ffcdd2;background:#fff8f8}
@@ -407,6 +409,7 @@ function renderAbertas() {
       </div>
       <div class="fracao-footer">
         <button class="btn-sm danger" onclick="confirmarExcluir('${f.key}')">🗑 Excluir</button>
+        <button class="btn-sm print" onclick="imprimirEtiquetaFracao('${f.key}')">🖨 Etiqueta</button>
         <button class="btn-sm ok" onclick="confirmarFechar('${f.key}')">✓ Fechar / Usar</button>
       </div>
     </div>`;
@@ -498,6 +501,30 @@ function abrirModal(title, sub, btns) {
   document.getElementById('modal').style.display = 'flex';
 }
 function fecharModal() { document.getElementById('modal').style.display = 'none'; }
+
+// ── Impressão de etiqueta de fração ──────────────────────────────
+function imprimirEtiquetaFracao(key) {
+  const f = fracoes[key];
+  if (!f) return;
+
+  const pacote = {
+    produto:      f.item,
+    loteForn:     f.loteForn || '',
+    loteImac:     f.loteImac || '',
+    nf:           '',
+    validade:     fmtD(f.val),
+    quantidade:   f.qtd || '',
+    dataRec:      fmtD(f.abertura),
+    dataRecLabel: 'Fracion.',
+    responsavel:  f.resp || '',
+    fornecedor:   '',
+    endereco:     ''
+  };
+
+  db.ref('imac-fila-impressao').push(pacote)
+    .then(() => toast('🖨 Etiqueta enviada para a Zebra!'))
+    .catch(() => toast('Erro ao enviar etiqueta.'));
+}
 
 // ── Toast ─────────────────────────────────────────────────────────
 function toast(msg) {

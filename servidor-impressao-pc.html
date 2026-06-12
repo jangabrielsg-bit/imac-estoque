@@ -253,7 +253,7 @@ body {
 
 <div class="footer">
   <span>${d.responsavel ? 'Op: ' + d.responsavel + '  ·  ' : ''}IMAC · Rastreabilidade</span>
-  <span>Entrada: ${fmtD(d.dataRec)}  ·  Impresso: ${dataHoje}</span>
+  <span>${d.dataRecLabel || 'Entrada'}: ${fmtD(d.dataRec)}  ·  Impresso: ${dataHoje}</span>
 </div>
 
 </body></html>`;
