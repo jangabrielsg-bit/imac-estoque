@@ -365,39 +365,13 @@ try {
     const jobId = snapshot.key;
     if (!job || !jobId) return;
 
-    // Deduplicação: transaction no Firebase garante que apenas UMA
-    // instância do servidor (aba) processa cada job
-    database.ref('imac-fila-impressao/' + jobId).transaction(
-      (current) => {
-        // Se já foi removido (null) ou processado, não faz nada (retorna undefined)
-        if (current === null) return undefined;
-        // Caso contrário, remove o nó (retorna null)
-        return null;
-      },
-      (error, committed) => {
-        if (error) {
-          addLog(`Erro na transação do job ${jobId}: ${error.message}`, 'err');
-          return;
-        }
-        if (!committed) {
-          // Outro processo/aba pegou este job antes
-          cntSkip++;
-          atualizarContadores();
-          addLog(`Job ${jobId} ignorado (já processado por outra instância).`, 'warn');
-          return;
-        }
-        // Este servidor ganhou a corrida — processa
-        if (jaProcessado(jobId)) {
-          cntSkip++;
-          atualizarContadores();
-          addLog(`Job ${jobId} ignorado (já processado nesta sessão).`, 'warn');
-          return;
-        }
-        marcarProcessado(jobId);
-        addLog(`Recebido: ${job.produto} — ${job.loteImac}`, 'ok');
-        enfileirar(job);
-      }
-    );
+    // Ignora jobs já processados nesta sessão (evita reprocessar no F5)
+    if (jaProcessado(jobId)) return;
+
+    marcarProcessado(jobId);
+    database.ref('imac-fila-impressao/' + jobId).remove();
+    addLog(`Recebido: ${job.produto}`, 'ok');
+    enfileirar(job);
   });
 
 } catch (e) {
