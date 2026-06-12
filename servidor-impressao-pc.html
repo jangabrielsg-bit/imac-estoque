@@ -157,6 +157,8 @@ html, body {
   background: #fff; color: #000;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
+  page-break-inside: avoid;
+  break-inside: avoid;
 }
 body {
   display: flex; flex-direction: column;
@@ -261,7 +263,6 @@ body {
 function imprimirEtiqueta(dados, callback) {
   addLog(`Processando: ${dados.produto}`, 'ok');
 
-  // Remove iframe anterior se ainda existir
   const old = document.getElementById('frame-impressao');
   if (old) old.remove();
 
@@ -275,60 +276,30 @@ function imprimirEtiqueta(dados, callback) {
   iDoc.write(gerarHTMLEtiqueta(dados));
   iDoc.close();
 
-  // Aguarda o iframe renderizar antes de chamar print()
-  // onload é mais confiável que setTimeout fixo
-  iframe.onload = () => {
+  // Flag garante que print() dispara uma única vez
+  // (evita dupla impressão quando onload + fallback coexistem)
+  let disparado = false;
+  function disparar(origem) {
+    if (disparado) return;
+    disparado = true;
     try {
-      iframe.contentWindow.focus();
+      // Sem focus() — não traz o navegador para frente
       iframe.contentWindow.print();
       cntOk++;
       atualizarContadores();
-      addLog(`Etiqueta enviada para impressão: ${dados.loteImac}`, 'ok');
-    } catch (e) {
-      cntErr++;
-      atualizarContadores();
-      addLog(`Erro ao imprimir: ${e.message}`, 'err');
-    }
-    // Remove o iframe após 12s (tempo suficiente para o spooler pegar)
-    setTimeout(() => { if (iframe.parentNode) iframe.remove(); }, 12000);
-    if (callback) callback();
-  };
-
-  // Fallback: se onload não disparar (pode acontecer com iframes em file://)
-  setTimeout(() => {
-    if (!iframe.dataset.loaded) {
-      try {
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-        cntOk++;
-        atualizarContadores();
-        addLog(`Etiqueta enviada (fallback timeout): ${dados.loteImac}`, 'warn');
-      } catch (e) {
-        cntErr++;
-        atualizarContadores();
-        addLog(`Erro no fallback: ${e.message}`, 'err');
-      }
-      setTimeout(() => { if (iframe.parentNode) iframe.remove(); }, 12000);
-      if (callback) callback();
-    }
-  }, 600);
-
-  iframe.onload = () => {
-    iframe.dataset.loaded = '1';
-    try {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-      cntOk++;
-      atualizarContadores();
-      addLog(`Etiqueta enviada: ${dados.loteImac}`, 'ok');
+      addLog(`Etiqueta enviada [${origem}]: ${dados.produto}`, 'ok');
     } catch (e) {
       cntErr++;
       atualizarContadores();
       addLog(`Erro ao imprimir: ${e.message}`, 'err');
     }
     setTimeout(() => { if (iframe.parentNode) iframe.remove(); }, 12000);
-    if (callback) callback();
-  };
+    if (callback) setTimeout(callback, 500);
+  }
+
+  iframe.onload = () => disparar('onload');
+  // Fallback: iframe em file:// às vezes não dispara onload
+  setTimeout(() => disparar('fallback'), 900);
 }
 
 // ── Firebase ──────────────────────────────────────────────────
