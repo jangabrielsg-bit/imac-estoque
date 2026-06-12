@@ -13,210 +13,204 @@ h1{font-size:18px;font-weight:700;margin-bottom:4px}
 .ok{background:#f0fdf8;color:#1a4a3a;border:1.5px solid #43c59e}
 .err{background:#fef2f2;color:#7f1d1d;border:1.5px solid #ef5350}
 .warn{background:#fffbeb;color:#78350f;border:1.5px solid #f59e0b}
-.log{background:#1a1a2e;color:#4fc3f7;padding:16px;border-radius:8px;font-family:'Courier New',monospace;font-size:12px;height:200px;overflow-y:auto;line-height:1.7}
+.log{background:#1a1a2e;color:#4fc3f7;padding:16px;border-radius:8px;font-family:'Courier New',monospace;font-size:12px;height:260px;overflow-y:auto;line-height:1.7}
 .log .ts{color:#90a0b0}
-.log .ok{color:#43c59e;background:none;border:none;padding:0;font-weight:normal}
-.log .err{color:#ef5350;background:none;border:none;padding:0;font-weight:normal}
-.status-box-fb {background:#f8f9fc;border:1px solid #dde3ee;border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:12px;color:#1a1a2e}
+.log .ok{color:#43c59e}
+.log .err{color:#ef5350}
+.log .warn{color:#f59e0b}
+.status-box-fb{background:#f8f9fc;border:1px solid #dde3ee;border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:12px}
+.badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#e3f8f1;color:#1a4a3a;margin-left:8px}
+.counter{display:flex;gap:16px;margin-top:12px}
+.cnt{background:#f8f9fc;border:1px solid #dde3ee;border-radius:8px;padding:10px 16px;flex:1;text-align:center}
+.cnt-num{font-size:24px;font-weight:700;color:#1a1a2e}
+.cnt-lbl{font-size:11px;color:#6b7a99;text-transform:uppercase;letter-spacing:.05em}
 </style>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 
 <div class="card">
-  <h1>IMAC — Servidor de Impressão</h1>
-  <div class="sub">Deixe esta janela aberta. O celular enviará as etiquetas via Nuvem (Firebase).</div>
+  <h1>IMAC — Servidor de Impressão <span class="badge" id="badge-status">Iniciando...</span></h1>
+  <div class="sub">Deixe esta janela aberta. O Chrome deve ser iniciado com <code>--kiosk-printing</code> para impressão sem diálogo.</div>
 
-  <div id="status-box" class="status warn">⏳ Conectando ao banco de dados do Firebase...</div>
+  <div id="status-box" class="status warn">⏳ Conectando ao Firebase...</div>
 
   <div class="status-box-fb">
-    Projeto Firebase: <strong>etiquetas-84828</strong><br>
-    Status da Conexão: <span id="fb-status" style="font-weight:bold;color:#f59e0b">Desconectado</span>
+    Firebase: <strong>etiquetas-84828</strong> &nbsp;·&nbsp;
+    Status: <span id="fb-status" style="font-weight:700;color:#f59e0b">Desconectado</span>
+    <br><small style="color:#6b7a99;font-size:11px">Método de impressão: iframe oculto + window.print() com kiosk-printing</small>
   </div>
 
+  <div class="counter">
+    <div class="cnt"><div class="cnt-num" id="cnt-ok">0</div><div class="cnt-lbl">Impressas</div></div>
+    <div class="cnt"><div class="cnt-num" id="cnt-skip">0</div><div class="cnt-lbl">Ignoradas (dup)</div></div>
+    <div class="cnt"><div class="cnt-num" id="cnt-err">0</div><div class="cnt-lbl">Erros</div></div>
+  </div>
+</div>
+
+<div class="card">
   <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:#6b7a99;text-transform:uppercase;letter-spacing:.05em">Log de impressões</div>
   <div class="log" id="log">
     <span class="ts">[sistema]</span> Iniciando monitoramento...<br>
   </div>
 </div>
 
+<!-- INSTRUÇÃO DE USO -->
+<div class="card" style="font-size:13px;color:#6b7a99;line-height:1.8">
+  <strong style="color:#1a1a2e">Como usar sem diálogo de impressão:</strong><br>
+  1. Abra o Chrome com o atalho: <code style="background:#f0f2f5;padding:1px 6px;border-radius:4px">chrome.exe --kiosk-printing</code><br>
+  2. Acesse este arquivo normalmente dentro do Chrome com kiosk<br>
+  3. Defina a Zebra como impressora padrão do Windows<br>
+  4. O tamanho de papel "90 x 50 mm" deve estar salvo nas preferências da Zebra<br>
+  <br>
+  <strong style="color:#1a1a2e">Atalho de inicialização sugerido (Target do atalho):</strong><br>
+  <code style="background:#f0f2f5;padding:2px 8px;border-radius:4px;font-size:11px">
+    "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk-printing --start-maximized "file:///C:/imac-impressao/servidor-impressao-pc.html"
+  </code>
+</div>
+
 <script>
-const log = document.getElementById('log');
-const statusBox = document.getElementById('status-box');
-const fbStatusSpan = document.getElementById('fb-status');
+// ── Contadores ────────────────────────────────────────────────
+let cntOk = 0, cntSkip = 0, cntErr = 0;
+function atualizarContadores() {
+  document.getElementById('cnt-ok').textContent   = cntOk;
+  document.getElementById('cnt-skip').textContent = cntSkip;
+  document.getElementById('cnt-err').textContent  = cntErr;
+}
 
-function addLog(msg, tipo='') {
+// ── Log ───────────────────────────────────────────────────────
+const logEl = document.getElementById('log');
+function addLog(msg, tipo = '') {
   const ts = new Date().toLocaleTimeString('pt-BR');
-  log.innerHTML += `<span class="ts">[${ts}]</span> <span class="${tipo}">${msg}</span><br>`;
-  log.scrollTop = log.scrollHeight;
+  logEl.innerHTML += `<span class="ts">[${ts}]</span> <span class="${tipo}">${msg}</span><br>`;
+  logEl.scrollTop = logEl.scrollHeight;
 }
 
-// ── Configuração do Firebase da IMAC ─────────────────────────────
-const firebaseConfig = {
-  apiKey: "AIzaSyCgniZ8fVNdmbzkyfOKGrfXjcKhvX-OIhI",
-  authDomain: "etiquetas-84828.firebaseapp.com",
-  projectId: "etiquetas-84828",
-  storageBucket: "etiquetas-84828.firebasestorage.app",
-  messagingSenderId: "820722854531",
-  appId: "1:820722854531:web:7d0460a9da17947c5789b6",
-  databaseURL: "https://etiquetas-84828-default-rtdb.firebaseio.com"
-};
+// ── Deduplicação: jobs já processados nesta sessão ────────────
+//    Usamos sessionStorage para sobreviver a F5 mas não a reabrir a aba
+const STORAGE_KEY = 'imac-jobs-processados';
+function getJobsProcessados() {
+  try { return new Set(JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '[]')); }
+  catch (_) { return new Set(); }
+}
+function salvarJobsProcessados(set) {
+  const arr = [...set];
+  // Mantém apenas os últimos 200
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(arr.slice(-200)));
+}
 
-// Inicializa conexão com o banco de dados
-try {
-  firebase.initializeApp(firebaseConfig);
-  const database = firebase.database();
-  
-  database.ref('.info/connected').on('value', (snap) => {
-    if (snap.val() === true) {
-      fbStatusSpan.textContent = "Conectado com Sucesso";
-      fbStatusSpan.style.color = "#43c59e";
-      statusBox.className = 'status ok';
-      statusBox.textContent = '✓ Servidor ativo — Aguardando comandos do celular';
-      addLog('Conectado ao Firebase Realtime Database.', 'ok');
-    } else {
-      fbStatusSpan.textContent = "Desconectado";
-      fbStatusSpan.style.color = "#ef5350";
-      statusBox.className = 'status err';
-      statusBox.textContent = '❌ Desconectado do Firebase.';
-    }
+let jobsProcessados = getJobsProcessados();
+
+function jaProcessado(jobId) { return jobsProcessados.has(jobId); }
+function marcarProcessado(jobId) {
+  jobsProcessados.add(jobId);
+  salvarJobsProcessados(jobsProcessados);
+}
+
+// ── Formata data ISO → BR ─────────────────────────────────────
+function fmtD(s) {
+  if (!s) return '—';
+  if (s.includes('/')) return s;
+  const [y, m, d] = s.split('-');
+  return d + '/' + m + '/' + y;
+}
+
+// ── Fila de impressão (processa um por vez) ───────────────────
+let filaLocal = [];
+let imprimindo = false;
+
+function enfileirar(job) {
+  filaLocal.push(job);
+  if (!imprimindo) processarProximo();
+}
+
+function processarProximo() {
+  if (!filaLocal.length) { imprimindo = false; return; }
+  imprimindo = true;
+  const job = filaLocal.shift();
+  imprimirEtiqueta(job, () => {
+    // Aguarda 1.5s entre impressões para não travar o spooler
+    setTimeout(processarProximo, 1500);
   });
-
-  // Ouvinte da fila de impressão
-  database.ref('imac-fila-impressao').on('child_added', (snapshot) => {
-    const job = snapshot.val();
-    const jobId = snapshot.key;
-    if (!job) return;
-
-    // Transaction: garante que somente UMA instância do servidor processa cada job,
-    // eliminando etiquetas duplicadas quando há mais de uma aba aberta.
-    database.ref('imac-fila-impressao/' + jobId).transaction(
-      (current) => (current === null ? undefined : null),
-      (error, committed) => {
-        if (!error && committed) processarJob(job);
-      }
-    );
-  });
-
-} catch (error) {
-  addLog('Erro ao inicializar Firebase: ' + error.message, 'err');
 }
 
-function processarJob(dados) {
-  addLog('Recebido da nuvem: ' + (dados.produto || 'Item') + ' — ' + (dados.loteImac || ''), 'ok');
-  imprimirEtiqueta(dados);
-}
-
-function imprimirEtiqueta(d) {
-  // 90×50mm — sem QR code — fontes grandes e nítidas
+// ── Geração do HTML da etiqueta (90×50mm) ─────────────────────
+function gerarHTMLEtiqueta(d) {
   const dataHoje = new Date().toLocaleDateString('pt-BR');
-
-  // Gera data de entrada em BR se vier em ISO
-  function fmtD(s) {
-    if (!s) return '—';
-    if (s.includes('/')) return s;
-    const [y,m,dia] = s.split('-');
-    return dia + '/' + m + '/' + y;
-  }
-
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
-/* ── Página: 90×50mm sem margem ── */
-@page {
-  size: 90mm 50mm;
-  margin: 0;
-}
-
-/* ── Reset total + prevenção de segunda página ── */
+@page { size: 90mm 50mm; margin: 0; }
 *, *::before, *::after {
   margin: 0; padding: 0; box-sizing: border-box;
   page-break-before: avoid !important;
   page-break-after:  avoid !important;
-  page-break-inside: avoid !important;
   break-before: avoid !important;
   break-after:  avoid !important;
-  break-inside: avoid !important;
 }
-
-html {
+html, body {
   width: 90mm; height: 50mm;
   max-width: 90mm; max-height: 50mm;
   overflow: hidden;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #fff; color: #000;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
-
 body {
-  font-family: Arial, Helvetica, sans-serif;
-  width: 90mm; height: 50mm;
-  max-width: 90mm; max-height: 50mm;
-  overflow: hidden;
-  background: #fff; color: #000;
   display: flex; flex-direction: column;
-  padding: 1.2mm 2mm 1.2mm 2mm;
-  page-break-after: avoid;
-  break-after: avoid;
+  padding: 1.2mm 2mm;
 }
-
-/* ── Cabeçalho ── */
 .header {
   display: flex; justify-content: space-between; align-items: center;
-  border-bottom: 1.5pt solid #000; padding-bottom: 0.8mm; margin-bottom: 1.2mm;
+  border-bottom: 1.5pt solid #000;
+  padding-bottom: 0.8mm; margin-bottom: 1mm;
   flex-shrink: 0;
 }
 .empresa { font-size: 7pt; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; color: #000; }
-.tipo    { font-size: 7pt; font-weight: 900; color: #000; }
+.tipo    { font-size: 6pt; font-weight: 900; color: #000; }
 
 /* ── Nome do produto ── */
 .produto {
-  font-size: 15pt; font-weight: 900; line-height: 1.1;
-  text-transform: uppercase; letter-spacing: .01em;
+  font-size: 14pt; font-weight: 900; line-height: 1.1;
+  text-transform: uppercase;
   flex-shrink: 0; margin-bottom: 0.8mm;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-
-/* ── Lote IMAC em destaque ── */
 .lote-bloco {
   display: flex; align-items: center; gap: 3mm;
-  margin-bottom: 1.5mm; flex-shrink: 0;
+  margin-bottom: 1.2mm; flex-shrink: 0;
 }
-.lote-label { font-size: 6.5pt; font-weight: 900; color: #000; text-transform: uppercase; letter-spacing: .05em; }
+.lote-label { font-size: 5.5pt; font-weight: 900; color: #000; text-transform: uppercase; }
 .lote-val {
   background: #000; color: #fff;
-  font-size: 9pt; font-weight: 700; font-family: 'Courier New', monospace;
-  padding: 0.5mm 2mm; letter-spacing: .04em;
+  font-size: 8.5pt; font-weight: 700; font-family: 'Courier New', monospace;
+  padding: 0.4mm 2mm; letter-spacing: .04em;
 }
-
-/* ── Grade de campos (2 colunas) ── */
 .grid {
   display: grid; grid-template-columns: 1fr 1fr;
-  column-gap: 4mm; row-gap: 1mm;
+  column-gap: 3mm; row-gap: 0.8mm;
   flex: 1; min-height: 0; overflow: hidden;
 }
 .campo { display: flex; flex-direction: column; min-width: 0; }
 .campo-lbl {
-  font-size: 6pt; font-weight: 900; text-transform: uppercase;
+  font-size: 5pt; font-weight: 900; text-transform: uppercase;
   letter-spacing: .04em; color: #000; line-height: 1;
 }
 .campo-val {
-  font-size: 9pt; font-weight: 900; color: #000; line-height: 1.2;
+  font-size: 8pt; font-weight: 900; color: #000; line-height: 1.2;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.campo-val.destaque { font-size: 10.5pt; font-weight: 900; }
-
-/* ── Rodapé ── */
+.campo-val.destaque { font-size: 9.5pt; font-weight: 900; }
 .footer {
-  border-top: 1pt solid #000; padding-top: 0.8mm; margin-top: 1mm;
+  border-top: 1pt solid #000; padding-top: 0.6mm; margin-top: 0.8mm;
   display: flex; justify-content: space-between; align-items: center;
   flex-shrink: 0;
 }
-.footer span { font-size: 7pt; color: #000; font-weight: 900; }
+.footer span { font-size: 5.5pt; color: #000; font-weight: 900; }
 </style>
-</head>
-<body>
+</head><body>
 
 <div class="header">
   <span class="empresa">IMAC — Controle de Estoque</span>
@@ -241,7 +235,7 @@ body {
   </div>
   <div class="campo">
     <div class="campo-lbl">Fornecedor</div>
-    <div class="campo-val">${(d.fornecedor || '—').slice(0,22)}</div>
+    <div class="campo-val">${(d.fornecedor || '—').slice(0, 22)}</div>
   </div>
   <div class="campo">
     <div class="campo-lbl">Validade</div>
@@ -263,31 +257,157 @@ body {
 </div>
 
 </body></html>`;
+}
 
-  // Impressão via iframe oculto — sem popup, sem diálogo (compatível com --kiosk-printing)
+// ── Impressão via iframe oculto ───────────────────────────────
+//    IMPORTANTE: o Chrome precisa ser iniciado com --kiosk-printing
+//    para que window.print() não abra o diálogo.
+function imprimirEtiqueta(dados, callback) {
+  addLog(`Processando: ${dados.produto} — ${dados.loteImac}`, 'ok');
+
+  // Remove iframe anterior se ainda existir
   const old = document.getElementById('frame-impressao');
   if (old) old.remove();
 
   const iframe = document.createElement('iframe');
   iframe.id = 'frame-impressao';
-  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:90mm;height:50mm;border:none';
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:90mm;height:50mm;border:none;visibility:hidden';
   document.body.appendChild(iframe);
 
   const iDoc = iframe.contentWindow.document;
   iDoc.open();
-  iDoc.write(html);
+  iDoc.write(gerarHTMLEtiqueta(dados));
   iDoc.close();
 
+  // Aguarda o iframe renderizar antes de chamar print()
+  // onload é mais confiável que setTimeout fixo
+  iframe.onload = () => {
+    try {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      cntOk++;
+      atualizarContadores();
+      addLog(`Etiqueta enviada para impressão: ${dados.loteImac}`, 'ok');
+    } catch (e) {
+      cntErr++;
+      atualizarContadores();
+      addLog(`Erro ao imprimir: ${e.message}`, 'err');
+    }
+    // Remove o iframe após 12s (tempo suficiente para o spooler pegar)
+    setTimeout(() => { if (iframe.parentNode) iframe.remove(); }, 12000);
+    if (callback) callback();
+  };
+
+  // Fallback: se onload não disparar (pode acontecer com iframes em file://)
   setTimeout(() => {
-    iDoc.documentElement.style.width  = '90mm';
-    iDoc.documentElement.style.height = '50mm';
-    iDoc.body.style.width  = '90mm';
-    iDoc.body.style.height = '50mm';
-    iframe.contentWindow.focus();
-    iframe.contentWindow.print();
-    addLog('Etiqueta enviada para impressão.', 'ok');
-    setTimeout(() => { if (iframe.parentNode) iframe.remove(); }, 10000);
-  }, 400);
+    if (!iframe.dataset.loaded) {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        cntOk++;
+        atualizarContadores();
+        addLog(`Etiqueta enviada (fallback timeout): ${dados.loteImac}`, 'warn');
+      } catch (e) {
+        cntErr++;
+        atualizarContadores();
+        addLog(`Erro no fallback: ${e.message}`, 'err');
+      }
+      setTimeout(() => { if (iframe.parentNode) iframe.remove(); }, 12000);
+      if (callback) callback();
+    }
+  }, 600);
+
+  iframe.onload = () => {
+    iframe.dataset.loaded = '1';
+    try {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      cntOk++;
+      atualizarContadores();
+      addLog(`Etiqueta enviada: ${dados.loteImac}`, 'ok');
+    } catch (e) {
+      cntErr++;
+      atualizarContadores();
+      addLog(`Erro ao imprimir: ${e.message}`, 'err');
+    }
+    setTimeout(() => { if (iframe.parentNode) iframe.remove(); }, 12000);
+    if (callback) callback();
+  };
+}
+
+// ── Firebase ──────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyCgniZ8fVNdmbzkyfOKGrfXjcKhvX-OIhI",
+  authDomain: "etiquetas-84828.firebaseapp.com",
+  projectId: "etiquetas-84828",
+  storageBucket: "etiquetas-84828.firebasestorage.app",
+  messagingSenderId: "820722854531",
+  appId: "1:820722854531:web:7d0460a9da17947c5789b6",
+  databaseURL: "https://etiquetas-84828-default-rtdb.firebaseio.com"
+};
+
+try {
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
+
+  // Monitor de conexão
+  database.ref('.info/connected').on('value', (snap) => {
+    const conectado = snap.val() === true;
+    document.getElementById('fb-status').textContent  = conectado ? 'Conectado' : 'Desconectado';
+    document.getElementById('fb-status').style.color  = conectado ? '#43c59e' : '#ef5350';
+    document.getElementById('status-box').className   = 'status ' + (conectado ? 'ok' : 'err');
+    document.getElementById('status-box').textContent = conectado
+      ? '✓ Servidor ativo — Aguardando comandos do celular'
+      : '❌ Desconectado do Firebase. Verifique a internet.';
+    document.getElementById('badge-status').textContent = conectado ? 'Online' : 'Offline';
+    if (conectado) addLog('Conectado ao Firebase Realtime Database.', 'ok');
+  });
+
+  // ── Listener da fila ──────────────────────────────────────
+  database.ref('imac-fila-impressao').on('child_added', (snapshot) => {
+    const job   = snapshot.val();
+    const jobId = snapshot.key;
+    if (!job || !jobId) return;
+
+    // Deduplicação: transaction no Firebase garante que apenas UMA
+    // instância do servidor (aba) processa cada job
+    database.ref('imac-fila-impressao/' + jobId).transaction(
+      (current) => {
+        // Se já foi removido (null) ou processado, não faz nada (retorna undefined)
+        if (current === null) return undefined;
+        // Caso contrário, remove o nó (retorna null)
+        return null;
+      },
+      (error, committed) => {
+        if (error) {
+          addLog(`Erro na transação do job ${jobId}: ${error.message}`, 'err');
+          return;
+        }
+        if (!committed) {
+          // Outro processo/aba pegou este job antes
+          cntSkip++;
+          atualizarContadores();
+          addLog(`Job ${jobId} ignorado (já processado por outra instância).`, 'warn');
+          return;
+        }
+        // Este servidor ganhou a corrida — processa
+        if (jaProcessado(jobId)) {
+          cntSkip++;
+          atualizarContadores();
+          addLog(`Job ${jobId} ignorado (já processado nesta sessão).`, 'warn');
+          return;
+        }
+        marcarProcessado(jobId);
+        addLog(`Recebido: ${job.produto} — ${job.loteImac}`, 'ok');
+        enfileirar(job);
+      }
+    );
+  });
+
+} catch (e) {
+  document.getElementById('status-box').className   = 'status err';
+  document.getElementById('status-box').textContent = '❌ Erro ao inicializar Firebase: ' + e.message;
+  addLog('Erro ao inicializar Firebase: ' + e.message, 'err');
 }
 </script>
 </body>
