@@ -106,7 +106,7 @@ input:focus{outline:none;border-color:var(--blue);background:#f8fdff}
   <div class="card">
     <div class="card-title">Últimos Recebimentos</div>
     <div id="historico-lista">
-      <div style="text-align:center;padding:32px;color:var(--gray);font-size:13px">Nenhum recebimento ainda.</div>
+      <div style="text-align:center;padding:32px;color:var(--gray);font-size:13px">⏳ Carregando histórico...</div>
     </div>
   </div>
 </div>
@@ -125,8 +125,7 @@ let codigoAtual = '';
 let scanner = null;
 let scannerAtivo = false;
 
-// Carrega o histórico salvo no celular (ou inicia vazio caso não exista)
-let historico = JSON.parse(localStorage.getItem('imac-rec-hist') || '[]');
+let historico = {}; // chave Firebase → objeto (carregado em tempo real)
 
 const firebaseConfig = {
   apiKey: "AIzaSyCgniZ8fVNdmbzkyfOKGrfXjcKhvX-OIhI",
@@ -141,6 +140,22 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
+const SETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;
+database.ref('imac-historico-etiquetas').orderByChild('timestamp').on('value', snap => {
+  const agora = Date.now();
+  historico = {};
+  snap.forEach(child => {
+    const item = child.val();
+    const key  = child.key;
+    if (!item) return;
+    if (item.timestamp && (agora - item.timestamp) > SETE_DIAS_MS) {
+      database.ref('imac-historico-etiquetas/' + key).remove();
+      return;
+    }
+    historico[key] = { ...item, _key: key };
+  });
+  renderHistorico();
+});
 
 function showTab(nome) {
   document.querySelectorAll('.tab').forEach((t, i) => {
@@ -150,7 +165,7 @@ function showTab(nome) {
   document.getElementById('tab-' + nome).style.display = 'block';
   
   if(nome !== 'scan') pararScanner();
-  if(nome === 'hist') renderHistorico();
+  if(nome === 'hist') renderHistorico(); // renderiza com dados já em memória
 }
 
 function iniciarScanner() {
@@ -207,9 +222,8 @@ function dispararFila() {
     database.ref('imac-fila-impressao').push(pacote);
   }
 
-  // Salva este registro no topo da lista de histórico local do dispositivo
-  historico.unshift(pacote);
-  localStorage.setItem('imac-rec-hist', JSON.stringify(historico.slice(0, 100))); // Guarda os últimos 100 itens
+  // Salva no histórico compartilhado do Firebase (expira em 7 dias)
+  database.ref('imac-historico-etiquetas').push({ ...pacote, timestamp: Date.now() });
 
   toast('Enviado para a Zebra!');
   limparFormulario();
@@ -218,25 +232,26 @@ function dispararFila() {
 
 function renderHistorico() {
   const el = document.getElementById('historico-lista');
-  if (!historico.length) {
+  const itens = Object.values(historico).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+  if (!itens.length) {
     el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--gray);font-size:13px">Nenhum recebimento encontrado no histórico.</div>';
     return;
   }
-  
-  el.innerHTML = historico.map((h, i) => `
+
+  el.innerHTML = itens.map(h => `
     <div class="hist-item">
       <div class="hist-lote">${h.nf ? 'NF ' + h.nf : h.loteForn || '—'}</div>
       <div class="hist-prod">${h.produto.toUpperCase()}</div>
       <div class="hist-meta">NF: ${h.nf} · Val: ${h.validade} · Qtd: ${h.quantidade || '—'} · Local: ${h.endereco || '—'}</div>
       <div class="hist-actions">
-        <button class="btn-sm blue" onclick="reimprimirLote(${i})">🖨 Reimprimir</button>
+        <button class="btn-sm blue" onclick="reimprimirLote('${h._key}')">🖨 Reimprimir</button>
       </div>
     </div>
   `).join('');
 }
 
-function reimprimirLote(index) {
-  const pacote = historico[index];
+function reimprimirLote(key) {
+  const pacote = historico[key];
   if (!pacote) return;
 
   // Pede confirmação da quantidade de cópias antes de mandar direto para o Node
