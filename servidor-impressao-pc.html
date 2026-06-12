@@ -219,10 +219,10 @@ body {
 
 <div class="produto">${d.produto || '—'}</div>
 
-<div class="lote-bloco">
+${d.loteImac ? `<div class="lote-bloco">
   <span class="lote-label">Lote IMAC</span>
-  <span class="lote-val">${d.loteImac || '—'}</span>
-</div>
+  <span class="lote-val">${d.loteImac}</span>
+</div>` : ''}
 
 <div class="grid">
   <div class="campo">
