@@ -24,6 +24,69 @@ h1{font-size:18px;font-weight:700;margin-bottom:4px}
 .cnt{background:#f8f9fc;border:1px solid #dde3ee;border-radius:8px;padding:10px 16px;flex:1;text-align:center}
 .cnt-num{font-size:24px;font-weight:700;color:#1a1a2e}
 .cnt-lbl{font-size:11px;color:#6b7a99;text-transform:uppercase;letter-spacing:.05em}
+
+/* ── Etiqueta: invisível na tela, visível só na impressão ── */
+#etiqueta-print { display: none; }
+
+@page { size: 90mm 50mm; margin: 0; }
+
+@media print {
+  /* Oculta toda a interface — mostra só a etiqueta */
+  body > *:not(#etiqueta-print) { display: none !important; }
+  body { padding: 0 !important; background: #fff !important; }
+
+  #etiqueta-print {
+    display: flex !important;
+    flex-direction: column;
+    width: 90mm; height: 50mm;
+    max-width: 90mm; max-height: 50mm;
+    overflow: hidden;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #000;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    padding: 1.2mm 2mm;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  #etiqueta-print * {
+    box-sizing: border-box; margin: 0; padding: 0;
+    page-break-inside: avoid; break-inside: avoid;
+  }
+  #etiqueta-print .ep-header {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1.5pt solid #000;
+    padding-bottom: 0.8mm; margin-bottom: 1mm; flex-shrink: 0;
+  }
+  #etiqueta-print .ep-logo { height: 9mm; max-width: 28mm; object-fit: contain; display: block; }
+  #etiqueta-print .ep-tipo { font-size: 6pt; font-weight: 900; color: #000; }
+  #etiqueta-print .ep-produto {
+    font-size: 14pt; font-weight: 900; line-height: 1.1;
+    text-transform: uppercase; flex-shrink: 0; margin-bottom: 0.8mm;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #etiqueta-print .ep-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    column-gap: 3mm; row-gap: 0.8mm;
+    flex: 1; min-height: 0; overflow: hidden;
+  }
+  #etiqueta-print .ep-campo { display: flex; flex-direction: column; min-width: 0; }
+  #etiqueta-print .ep-lbl {
+    font-size: 5pt; font-weight: 900; text-transform: uppercase;
+    letter-spacing: .04em; color: #000; line-height: 1;
+  }
+  #etiqueta-print .ep-val {
+    font-size: 8pt; font-weight: 900; color: #000; line-height: 1.2;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #etiqueta-print .ep-val.destaque { font-size: 9.5pt; }
+  #etiqueta-print .ep-footer {
+    border-top: 1pt solid #000; padding-top: 0.6mm; margin-top: 0.8mm;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-shrink: 0;
+  }
+  #etiqueta-print .ep-footer span { font-size: 5.5pt; color: #000; font-weight: 900; }
+}
 </style>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
@@ -40,7 +103,7 @@ h1{font-size:18px;font-weight:700;margin-bottom:4px}
   <div class="status-box-fb">
     Firebase: <strong>etiquetas-84828</strong> &nbsp;·&nbsp;
     Status: <span id="fb-status" style="font-weight:700;color:#f59e0b">Desconectado</span>
-    <br><small style="color:#6b7a99;font-size:11px">Método de impressão: iframe oculto + window.print() com kiosk-printing</small>
+    <br><small style="color:#6b7a99;font-size:11px">Método: window.print() com @media print — sem iframe, sem diálogo</small>
   </div>
 
   <div class="counter">
@@ -57,7 +120,6 @@ h1{font-size:18px;font-weight:700;margin-bottom:4px}
   </div>
 </div>
 
-<!-- INSTRUÇÃO DE USO -->
 <div class="card" style="font-size:13px;color:#6b7a99;line-height:1.8">
   <strong style="color:#1a1a2e">Como usar sem diálogo de impressão:</strong><br>
   1. Abra o Chrome com o atalho: <code style="background:#f0f2f5;padding:1px 6px;border-radius:4px">chrome.exe --kiosk-printing</code><br>
@@ -70,6 +132,9 @@ h1{font-size:18px;font-weight:700;margin-bottom:4px}
     "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk-printing --start-maximized "file:///C:/imac-impressao/servidor-impressao-pc.html"
   </code>
 </div>
+
+<!-- Área de impressão: invisível na tela, renderizada só ao imprimir -->
+<div id="etiqueta-print"></div>
 
 <script>
 // ── Contadores ────────────────────────────────────────────────
@@ -88,26 +153,18 @@ function addLog(msg, tipo = '') {
   logEl.scrollTop = logEl.scrollHeight;
 }
 
-// ── Deduplicação: jobs já processados nesta sessão ────────────
-//    Usamos sessionStorage para sobreviver a F5 mas não a reabrir a aba
+// ── Deduplicação via sessionStorage ──────────────────────────
 const STORAGE_KEY = 'imac-jobs-processados';
 function getJobsProcessados() {
   try { return new Set(JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '[]')); }
   catch (_) { return new Set(); }
 }
 function salvarJobsProcessados(set) {
-  const arr = [...set];
-  // Mantém apenas os últimos 200
-  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(arr.slice(-200)));
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify([...set].slice(-200)));
 }
-
 let jobsProcessados = getJobsProcessados();
-
-function jaProcessado(jobId) { return jobsProcessados.has(jobId); }
-function marcarProcessado(jobId) {
-  jobsProcessados.add(jobId);
-  salvarJobsProcessados(jobsProcessados);
-}
+function jaProcessado(jobId)  { return jobsProcessados.has(jobId); }
+function marcarProcessado(id) { jobsProcessados.add(id); salvarJobsProcessados(jobsProcessados); }
 
 // ── Formata data ISO → BR ─────────────────────────────────────
 function fmtD(s) {
@@ -117,7 +174,7 @@ function fmtD(s) {
   return d + '/' + m + '/' + y;
 }
 
-// ── Fila de impressão (processa um por vez) ───────────────────
+// ── Fila local (um por vez) ───────────────────────────────────
 let filaLocal = [];
 let imprimindo = false;
 
@@ -130,176 +187,71 @@ function processarProximo() {
   if (!filaLocal.length) { imprimindo = false; return; }
   imprimindo = true;
   const job = filaLocal.shift();
-  imprimirEtiqueta(job, () => {
-    // Aguarda 1.5s entre impressões para não travar o spooler
-    setTimeout(processarProximo, 1500);
-  });
+  imprimirEtiqueta(job, () => setTimeout(processarProximo, 1500));
 }
 
-// ── Geração do HTML da etiqueta (90×50mm) ─────────────────────
-function gerarHTMLEtiqueta(d) {
+// ── Gera o conteúdo HTML da etiqueta ─────────────────────────
+function gerarConteudoEtiqueta(d) {
   const dataHoje = new Date().toLocaleDateString('pt-BR');
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
-<style>
-@page { size: 90mm 50mm; margin: 0; }
-*, *::before, *::after {
-  margin: 0; padding: 0; box-sizing: border-box;
-  page-break-before: avoid !important;
-  page-break-after:  avoid !important;
-  break-before: avoid !important;
-  break-after:  avoid !important;
-}
-html, body {
-  width: 90mm; height: 50mm;
-  max-width: 90mm; max-height: 50mm;
-  overflow: hidden;
-  font-family: Arial, Helvetica, sans-serif;
-  background: #fff; color: #000;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
-  page-break-inside: avoid;
-  break-inside: avoid;
-}
-body {
-  display: flex; flex-direction: column;
-  padding: 1.2mm 2mm;
-}
-.header {
-  display: flex; justify-content: space-between; align-items: center;
-  border-bottom: 1.5pt solid #000;
-  padding-bottom: 0.8mm; margin-bottom: 1mm;
-  flex-shrink: 0;
-}
-.logo-img { height: 9mm; max-width: 28mm; object-fit: contain; display: block; }
-.tipo     { font-size: 6pt; font-weight: 900; color: #000; }
-
-/* ── Nome do produto ── */
-.produto {
-  font-size: 14pt; font-weight: 900; line-height: 1.1;
-  text-transform: uppercase;
-  flex-shrink: 0; margin-bottom: 0.8mm;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.lote-bloco {
-  display: flex; align-items: center; gap: 3mm;
-  margin-bottom: 1.2mm; flex-shrink: 0;
-}
-.lote-label { font-size: 5.5pt; font-weight: 900; color: #000; text-transform: uppercase; }
-.lote-val {
-  background: #000; color: #fff;
-  font-size: 8.5pt; font-weight: 700; font-family: 'Courier New', monospace;
-  padding: 0.4mm 2mm; letter-spacing: .04em;
-}
-.grid {
-  display: grid; grid-template-columns: 1fr 1fr;
-  column-gap: 3mm; row-gap: 0.8mm;
-  flex: 1; min-height: 0; overflow: hidden;
-}
-.campo { display: flex; flex-direction: column; min-width: 0; }
-.campo-lbl {
-  font-size: 5pt; font-weight: 900; text-transform: uppercase;
-  letter-spacing: .04em; color: #000; line-height: 1;
-}
-.campo-val {
-  font-size: 8pt; font-weight: 900; color: #000; line-height: 1.2;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.campo-val.destaque { font-size: 9.5pt; font-weight: 900; }
-.footer {
-  border-top: 1pt solid #000; padding-top: 0.6mm; margin-top: 0.8mm;
-  display: flex; justify-content: space-between; align-items: center;
-  flex-shrink: 0;
-}
-.footer span { font-size: 5.5pt; color: #000; font-weight: 900; }
-</style>
-</head><body>
-
-<div class="header">
-  <img src="https://jangabrielsg-bit.github.io/imac-estoque/logo-imac.png" class="logo-img">
-  <span class="tipo">Rastreabilidade de Insumos</span>
-</div>
-
-<div class="produto">${d.produto || '—'}</div>
-
-<div class="grid">
-  <div class="campo">
-    <div class="campo-lbl">Lote Fornecedor</div>
-    <div class="campo-val">${d.loteForn || '—'}</div>
-  </div>
-  <div class="campo">
-    <div class="campo-lbl">Nota Fiscal</div>
-    <div class="campo-val">${d.nf || '—'}</div>
-  </div>
-  <div class="campo">
-    <div class="campo-lbl">Fornecedor</div>
-    <div class="campo-val">${(d.fornecedor || '—').slice(0, 22)}</div>
-  </div>
-  <div class="campo">
-    <div class="campo-lbl">Validade</div>
-    <div class="campo-val destaque">${d.validade || '—'}</div>
-  </div>
-  <div class="campo">
-    <div class="campo-lbl">Quantidade</div>
-    <div class="campo-val">${d.quantidade || '—'}</div>
-  </div>
-  ${d.dataRecLabel && d.dataRecLabel !== 'Entrada' ? `<div class="campo"><div class="campo-lbl">${d.dataRecLabel}</div><div class="campo-val">${fmtD(d.dataRec) || '—'}</div></div>` : ''}
-  <div class="campo">
-    <div class="campo-lbl">Endereço / Local</div>
-    <div class="campo-val">${d.endereco || '—'}</div>
-  </div>
-</div>
-
-<div class="footer">
-  <span>${d.responsavel ? 'Op: ' + d.responsavel + '  ·  ' : ''}IMAC · Rastreabilidade</span>
-  <span>Impresso: ${dataHoje}</span>
-</div>
-
-</body></html>`;
+  return `
+    <div class="ep-header">
+      <img src="https://jangabrielsg-bit.github.io/imac-estoque/logo-imac.png" class="ep-logo">
+      <span class="ep-tipo">Rastreabilidade de Insumos</span>
+    </div>
+    <div class="ep-produto">${d.produto || '—'}</div>
+    <div class="ep-grid">
+      <div class="ep-campo"><div class="ep-lbl">Lote Fornecedor</div><div class="ep-val">${d.loteForn || '—'}</div></div>
+      <div class="ep-campo"><div class="ep-lbl">Nota Fiscal</div><div class="ep-val">${d.nf || '—'}</div></div>
+      <div class="ep-campo"><div class="ep-lbl">Fornecedor</div><div class="ep-val">${(d.fornecedor || '—').slice(0,22)}</div></div>
+      <div class="ep-campo"><div class="ep-lbl">Validade</div><div class="ep-val destaque">${d.validade || '—'}</div></div>
+      <div class="ep-campo"><div class="ep-lbl">Quantidade</div><div class="ep-val">${d.quantidade || '—'}</div></div>
+      ${d.dataRecLabel && d.dataRecLabel !== 'Entrada' ? `<div class="ep-campo"><div class="ep-lbl">${d.dataRecLabel}</div><div class="ep-val">${fmtD(d.dataRec) || '—'}</div></div>` : ''}
+      <div class="ep-campo"><div class="ep-lbl">Endereço / Local</div><div class="ep-val">${d.endereco || '—'}</div></div>
+    </div>
+    <div class="ep-footer">
+      <span>${d.responsavel ? 'Op: ' + d.responsavel + '  ·  ' : ''}IMAC · Rastreabilidade</span>
+      <span>Impresso: ${dataHoje}</span>
+    </div>`;
 }
 
-// ── Impressão via iframe oculto ───────────────────────────────
-//    IMPORTANTE: o Chrome precisa ser iniciado com --kiosk-printing
-//    para que window.print() não abra o diálogo.
+// ── Impressão via window.print() na própria página ───────────
+// @media print oculta tudo exceto #etiqueta-print.
+// window.print() com --kiosk-printing não abre diálogo nem traz o
+// navegador para frente (ao contrário de iframe.contentWindow.print()).
 function imprimirEtiqueta(dados, callback) {
   addLog(`Processando: ${dados.produto}`, 'ok');
 
-  const old = document.getElementById('frame-impressao');
-  if (old) old.remove();
+  const alvo = document.getElementById('etiqueta-print');
+  alvo.innerHTML = gerarConteudoEtiqueta(dados);
 
-  const iframe = document.createElement('iframe');
-  iframe.id = 'frame-impressao';
-  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:90mm;height:50mm;border:none;visibility:hidden';
-  document.body.appendChild(iframe);
-
-  const iDoc = iframe.contentWindow.document;
-  iDoc.open();
-  iDoc.write(gerarHTMLEtiqueta(dados));
-  iDoc.close();
-
-  // Flag garante que print() dispara uma única vez
-  // (evita dupla impressão quando onload + fallback coexistem)
   let disparado = false;
-  function disparar(origem) {
+  function disparar() {
     if (disparado) return;
     disparado = true;
     try {
-      // Sem focus() — não traz o navegador para frente
-      iframe.contentWindow.print();
+      window.print();
       cntOk++;
       atualizarContadores();
-      addLog(`Etiqueta enviada [${origem}]: ${dados.produto}`, 'ok');
+      addLog(`Impresso: ${dados.produto}`, 'ok');
     } catch (e) {
       cntErr++;
       atualizarContadores();
-      addLog(`Erro ao imprimir: ${e.message}`, 'err');
+      addLog(`Erro: ${e.message}`, 'err');
     }
-    setTimeout(() => { if (iframe.parentNode) iframe.remove(); }, 12000);
-    if (callback) setTimeout(callback, 500);
+    alvo.innerHTML = '';
+    if (callback) setTimeout(callback, 1500);
   }
 
-  iframe.onload = () => disparar('onload');
-  // Fallback: iframe em file:// às vezes não dispara onload
-  setTimeout(() => disparar('fallback'), 900);
+  const img = alvo.querySelector('img');
+  if (img && !img.complete) {
+    // Aguarda a logo carregar (primeira vez)
+    img.addEventListener('load',  disparar);
+    img.addEventListener('error', disparar);
+    setTimeout(disparar, 2000); // fallback
+  } else {
+    // Logo já em cache ou sem imagem
+    setTimeout(disparar, 80);
+  }
 }
 
 // ── Firebase ──────────────────────────────────────────────────
@@ -317,7 +269,6 @@ try {
   firebase.initializeApp(firebaseConfig);
   const database = firebase.database();
 
-  // Monitor de conexão
   database.ref('.info/connected').on('value', (snap) => {
     const conectado = snap.val() === true;
     document.getElementById('fb-status').textContent  = conectado ? 'Conectado' : 'Desconectado';
@@ -327,18 +278,14 @@ try {
       ? '✓ Servidor ativo — Aguardando comandos do celular'
       : '❌ Desconectado do Firebase. Verifique a internet.';
     document.getElementById('badge-status').textContent = conectado ? 'Online' : 'Offline';
-    if (conectado) addLog('Conectado ao Firebase Realtime Database.', 'ok');
+    if (conectado) addLog('Conectado ao Firebase.', 'ok');
   });
 
-  // ── Listener da fila ──────────────────────────────────────
   database.ref('imac-fila-impressao').on('child_added', (snapshot) => {
     const job   = snapshot.val();
     const jobId = snapshot.key;
     if (!job || !jobId) return;
-
-    // Ignora jobs já processados nesta sessão (evita reprocessar no F5)
     if (jaProcessado(jobId)) return;
-
     marcarProcessado(jobId);
     database.ref('imac-fila-impressao/' + jobId).remove();
     addLog(`Recebido: ${job.produto}`, 'ok');
@@ -348,7 +295,7 @@ try {
 } catch (e) {
   document.getElementById('status-box').className   = 'status err';
   document.getElementById('status-box').textContent = '❌ Erro ao inicializar Firebase: ' + e.message;
-  addLog('Erro ao inicializar Firebase: ' + e.message, 'err');
+  addLog('Erro Firebase: ' + e.message, 'err');
 }
 </script>
 </body>
