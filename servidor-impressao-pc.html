@@ -248,55 +248,82 @@ function imprimirWindowPrint(d) {
   const dataHoje = new Date().toLocaleDateString('pt-BR');
 
   const html = `<!DOCTYPE html>
-<html lang="pt-BR">
+<html>
 <head>
 <meta charset="UTF-8">
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;line-height:1}
 @page{size:72mm 72mm;margin:0}
-html,body{width:72mm;height:72mm;overflow:hidden;background:#fff}
+html{width:72mm;height:72mm;overflow:hidden}
 body{
-  font-family:Arial,Helvetica,sans-serif;color:#000;
+  width:72mm;height:72mm;overflow:hidden;
+  font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;
   -webkit-print-color-adjust:exact;print-color-adjust:exact;
-  display:grid;grid-template-rows:auto auto 1fr auto;
-  padding:0.8mm 1.5mm;
+  display:flex;flex-direction:column;
+  padding:1mm 1.5mm;
 }
-.ep-header{display:flex;justify-content:space-between;align-items:center;border-bottom:1.5pt solid #000;padding-bottom:0.5mm;margin-bottom:0.8mm}
-.ep-empresa{font-size:6.5pt;font-weight:900;text-transform:uppercase;letter-spacing:.04em}
-.ep-tipo{font-size:6.5pt;font-weight:900}
-.ep-produto{font-size:14pt;font-weight:900;line-height:1.05;text-transform:uppercase;margin-bottom:1mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ep-grid{display:grid;grid-template-columns:1fr 1fr;column-gap:3mm;row-gap:0.7mm;overflow:hidden;align-content:start}
-.ep-campo{display:flex;flex-direction:column;min-width:0;overflow:hidden}
-.ep-lbl{font-size:5.5pt;font-weight:900;text-transform:uppercase;letter-spacing:.03em;line-height:1}
-.ep-val{font-size:8.5pt;font-weight:900;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ep-val.destaque{font-size:9.5pt;font-weight:900}
-.ep-footer{border-top:1pt solid #000;padding-top:0.5mm;margin-top:0.5mm;display:flex;justify-content:space-between;align-items:center}
-.ep-footer span{font-size:6pt;font-weight:900}
+.hd{
+  display:flex;justify-content:space-between;align-items:baseline;
+  border-bottom:1pt solid #000;padding-bottom:0.5mm;margin-bottom:0.8mm;
+  flex-shrink:0;
+}
+.hd span{font-size:5.5pt;font-weight:900;text-transform:uppercase}
+.prd{
+  font-size:12pt;font-weight:900;text-transform:uppercase;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  margin-bottom:1mm;flex-shrink:0;
+}
+.grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  column-gap:2mm;row-gap:0.8mm;
+  flex:1;min-height:0;overflow:hidden;align-content:start;
+}
+.f{display:flex;flex-direction:column;overflow:hidden}
+.lb{font-size:5pt;font-weight:900;text-transform:uppercase;margin-bottom:0.2mm}
+.vl{font-size:8pt;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vl.g{font-size:9pt}
+.ft{
+  border-top:1pt solid #000;padding-top:0.5mm;margin-top:0.8mm;
+  display:flex;justify-content:space-between;
+  flex-shrink:0;
+}
+.ft span{font-size:5.5pt;font-weight:900}
 </style>
 </head>
 <body>
-<div class="ep-header">
-  <span class="ep-empresa">IMAC — Controle de Qualidade</span>
-  <span class="ep-tipo">Rastreabilidade de Insumos</span>
+<div class="hd">
+  <span>IMAC — Controle de Qualidade</span>
+  <span>Rastreabilidade de Insumos</span>
 </div>
-<div class="ep-produto">${d.produto || '—'}</div>
-<div class="ep-grid">
-  <div class="ep-campo"><div class="ep-lbl">Lote Fornecedor</div><div class="ep-val">${d.loteForn || '—'}</div></div>
-  <div class="ep-campo"><div class="ep-lbl">Nota Fiscal</div><div class="ep-val">${d.nf || '—'}</div></div>
-  <div class="ep-campo"><div class="ep-lbl">Fornecedor</div><div class="ep-val">${(d.fornecedor || '—').slice(0,22)}</div></div>
-  <div class="ep-campo"><div class="ep-lbl">Validade</div><div class="ep-val destaque">${d.validade || '—'}</div></div>
-  <div class="ep-campo"><div class="ep-lbl">Quantidade</div><div class="ep-val">${d.quantidade || '—'}</div></div>
-  <div class="ep-campo"><div class="ep-lbl">Endereço / Local</div><div class="ep-val">${d.endereco || '—'}</div></div>
+<div class="prd">${d.produto || '—'}</div>
+<div class="grid">
+  <div class="f"><div class="lb">Lote Fornecedor</div><div class="vl">${d.loteForn || '—'}</div></div>
+  <div class="f"><div class="lb">Nota Fiscal</div><div class="vl">${d.nf || '—'}</div></div>
+  <div class="f"><div class="lb">Fornecedor</div><div class="vl">${(d.fornecedor||'—').slice(0,22)}</div></div>
+  <div class="f"><div class="lb">Validade</div><div class="vl g">${d.validade || '—'}</div></div>
+  <div class="f"><div class="lb">Quantidade</div><div class="vl">${d.quantidade || '—'}</div></div>
+  <div class="f"><div class="lb">Endereço / Local</div><div class="vl">${d.endereco || '—'}</div></div>
 </div>
-<div class="ep-footer">
-  <span>${d.responsavel ? 'Op: ' + d.responsavel + '  ·  ' : ''}IMAC · Rastreabilidade</span>
-  <span>Entrada: ${fmtD(d.dataRec)}  ·  Impresso: ${dataHoje}</span>
+<div class="ft">
+  <span>${d.responsavel ? 'Op: '+d.responsavel+' · ' : ''}IMAC · Rastreabilidade</span>
+  <span>Entrada: ${fmtD(d.dataRec)} · Imp: ${dataHoje}</span>
 </div>
-<script>window.onload=function(){window.print();setTimeout(function(){window.close()},500)}<\/script>
+<script>
+setTimeout(function(){
+  window.print();
+  setTimeout(function(){window.close()},500);
+},150);
+<\/script>
 </body>
 </html>`;
 
-  const janela = window.open('', '_blank', 'width=280,height=280');
+  const janela = window.open('', '_blank', 'width=272,height=272,menubar=no,toolbar=no,location=no,status=no,scrollbars=no');
+  if (!janela) {
+    addLog('Popup bloqueado — permita popups para este site nas configurações do Chrome', 'err');
+    imprimindo = false;
+    return;
+  }
+  janela.document.open();
   janela.document.write(html);
   janela.document.close();
 
