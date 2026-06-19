@@ -15,7 +15,10 @@ var POLL_MS          = 2000;            // checar fila a cada 2 segundos
 // ─────────────────────────────────────────────────────────────────
 
 var https = require('https');
+var http  = require('http');
 var net   = require('net');
+
+var PORTA_HTTP = 35234; // porta local para a página HTML se comunicar
 
 var DB_HOST = 'etiquetas-84828-default-rtdb.firebaseio.com';
 
@@ -190,6 +193,53 @@ function verificarFila() {
       ocupado = false;
     });
 }
+
+// ── Servidor HTTP local (ponte ZPL para a página HTML) ───────────
+// A página servidor-impressao-pc.html chama este servidor em vez de
+// usar window.print(), eliminando o popup do Chrome e o baixo DPI.
+http.createServer(function(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+
+  if (req.method === 'GET' && req.url === '/status') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, impressora: IMPRESSORA_IP }));
+    return;
+  }
+
+  if (req.method === 'POST' && req.url === '/imprimir') {
+    var corpo = '';
+    req.on('data', function(c) { corpo += c; });
+    req.on('end', function() {
+      try {
+        var job = JSON.parse(corpo);
+        enviarZPL(gerarZPL(job))
+          .then(function() {
+            log('HTTP OK: ' + (job.produto || ''));
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true }));
+          })
+          .catch(function(err) {
+            log('HTTP ERRO: ' + err.message);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: false, erro: err.message }));
+          });
+      } catch(e) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, erro: 'JSON invalido' }));
+      }
+    });
+    return;
+  }
+
+  res.writeHead(404); res.end();
+}).listen(PORTA_HTTP, '127.0.0.1', function() {
+  log('Ponte HTTP: http://127.0.0.1:' + PORTA_HTTP);
+  log('A pagina HTML vai usar esta ponte para impressao ZPL.');
+});
 
 log('=== IMAC Servidor de Impressao (Node.js) ===');
 log('Impressora: ' + IMPRESSORA_IP + ':' + IMPRESSORA_PORTA);
