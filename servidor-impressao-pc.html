@@ -29,56 +29,57 @@ h1{font-size:18px;font-weight:700;margin-bottom:4px}
 @page { size: 90mm 50mm; margin: 0; }
 
 @media print {
-  /* Usa 100% em vez de mm fixo: adapta à área útil real do Chrome,
-     independente de margens mínimas aplicadas pelo driver/SO */
+  /* 100vw/100vh em print CSS = dimensão física da página (não depende de cadeia height:100%) */
   html, body {
-    width: 100% !important; height: 100% !important;
+    width: 100vw !important; height: 100vh !important;
     overflow: hidden !important; margin: 0 !important; padding: 0 !important;
     background: #fff !important;
   }
   .card { display: none !important; }
 
+  /* Grid com 4 linhas explícitas: cabeçalho | produto | dados(1fr) | rodapé
+     O rodapé nunca é espremido porque tem sua própria linha garantida */
   #etiqueta-print {
-    display: flex !important; flex-direction: column;
-    width: 100%; height: 100%;
+    display: grid !important;
+    grid-template-rows: auto auto 1fr auto;
+    width: 100vw; height: 100vh;
     overflow: hidden;
+    box-sizing: border-box;
     font-family: Arial, Helvetica, sans-serif; color: #000;
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
-    padding: 0.5mm 1mm;
+    padding: 0.8mm 1.5mm;
   }
   #etiqueta-print * { box-sizing: border-box; margin: 0; padding: 0; }
 
   .ep-header {
     display: flex; justify-content: space-between; align-items: center;
     border-bottom: 1.5pt solid #000; padding-bottom: 0.5mm; margin-bottom: 0.8mm;
-    flex-shrink: 0;
   }
-  .ep-empresa { font-size: 7pt; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; color: #000; }
-  .ep-tipo    { font-size: 7pt; font-weight: 900; color: #000; }
+  .ep-empresa { font-size: 6.5pt; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; color: #000; }
+  .ep-tipo    { font-size: 6.5pt; font-weight: 900; color: #000; }
 
   .ep-produto {
     font-size: 14pt; font-weight: 900; line-height: 1.05;
-    text-transform: uppercase; letter-spacing: .01em;
-    flex-shrink: 0; margin-bottom: 1mm;
+    text-transform: uppercase;
+    margin-bottom: 1mm;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
 
   .ep-grid {
     display: grid; grid-template-columns: 1fr 1fr;
-    column-gap: 3mm; row-gap: 0.8mm;
-    flex: 1; min-height: 0; overflow: hidden;
+    column-gap: 3mm; row-gap: 0.7mm;
+    overflow: hidden; align-content: start;
   }
   .ep-campo { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
   .ep-lbl { font-size: 5.5pt; font-weight: 900; text-transform: uppercase; letter-spacing: .03em; color: #000; line-height: 1; }
-  .ep-val { font-size: 8.5pt; font-weight: 900; color: #000; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ep-val.destaque { font-size: 10pt; font-weight: 900; }
+  .ep-val { font-size: 8.5pt; font-weight: 900; color: #000; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ep-val.destaque { font-size: 9.5pt; font-weight: 900; }
 
   .ep-footer {
-    border-top: 1pt solid #000; padding-top: 0.5mm; margin-top: 0.8mm;
+    border-top: 1pt solid #000; padding-top: 0.5mm; margin-top: 0.5mm;
     display: flex; justify-content: space-between; align-items: center;
-    flex-shrink: 0;
   }
-  .ep-footer span { font-size: 6.5pt; color: #000; font-weight: 900; }
+  .ep-footer span { font-size: 6pt; color: #000; font-weight: 900; }
 }
 </style>
 
