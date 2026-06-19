@@ -105,6 +105,7 @@ function gerarZPL(d) {
 
   return [
     '^XA',
+    '^POI',
     '^PW720',
     '^LL400',
     '^LH0,0',
