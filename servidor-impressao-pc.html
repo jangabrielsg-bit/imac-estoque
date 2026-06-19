@@ -26,7 +26,7 @@ h1{font-size:18px;font-weight:700;margin-bottom:4px}
 /* ── Etiqueta: oculta na tela, impressa pelo window.print() ── */
 #etiqueta-print { display: none; }
 
-@page { size: 90mm 50mm; margin: 0; }
+@page { size: 72mm 72mm; margin: 0; }
 
 @media print {
   /* html/body SEM altura fixa: o documento mede exatamente o que o
@@ -41,8 +41,8 @@ h1{font-size:18px;font-weight:700;margin-bottom:4px}
   #etiqueta-print {
     display: grid !important;
     grid-template-rows: auto auto 1fr auto;
-    width: 90mm;
-    height: 50mm;
+    width: 72mm;
+    height: 72mm;
     overflow: hidden;
     box-sizing: border-box;
     font-family: Arial, Helvetica, sans-serif; color: #000;
