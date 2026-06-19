@@ -18,29 +18,110 @@ h1{font-size:18px;font-weight:700;margin-bottom:4px}
 .log .ok{color:#43c59e;background:none;border:none;padding:0;font-weight:normal}
 .log .err{color:#ef5350;background:none;border:none;padding:0;font-weight:normal}
 .log .warn{color:#f59e0b;background:none;border:none;padding:0;font-weight:normal}
-.status-box-fb {background:#f8f9fc;border:1px solid #dde3ee;border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:12px;color:#1a1a2e}
+.status-box-fb{background:#f8f9fc;border:1px solid #dde3ee;border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:12px;color:#1a1a2e}
 .modo-badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;margin-left:8px}
 .modo-zpl{background:#e3f8f1;color:#1a4a3a}
 .modo-html{background:#fff3cd;color:#856404}
+
+/* ── Etiqueta: oculta na tela, impressa pelo window.print() ── */
+#etiqueta-print { display: none; }
+
+@page { size: 90mm 50mm; margin: 0; }
+
+@media print {
+  /* Trava tudo em exatamente 1 página de 90×50 mm */
+  html {
+    width: 90mm !important; height: 50mm !important;
+    max-width: 90mm !important; max-height: 50mm !important;
+    overflow: hidden !important; margin: 0 !important; padding: 0 !important;
+  }
+  body {
+    width: 90mm !important; height: 50mm !important;
+    max-width: 90mm !important; max-height: 50mm !important;
+    overflow: hidden !important; margin: 0 !important; padding: 0 !important;
+    background: #fff !important;
+  }
+  /* Esconde toda a interface — mostra só a etiqueta */
+  body > *:not(#etiqueta-print) { display: none !important; }
+
+  #etiqueta-print {
+    display: flex !important; flex-direction: column;
+    width: 90mm; height: 50mm;
+    max-width: 90mm; max-height: 50mm;
+    overflow: hidden;
+    font-family: Arial, Helvetica, sans-serif; color: #000;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    padding: 1.2mm 2mm;
+    page-break-before: avoid; page-break-after: avoid; page-break-inside: avoid;
+    break-before: avoid; break-after: avoid; break-inside: avoid;
+  }
+  #etiqueta-print * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  .ep-header {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1.5pt solid #000; padding-bottom: 0.8mm; margin-bottom: 1.2mm;
+    flex-shrink: 0;
+  }
+  .ep-empresa { font-size: 7pt; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; color: #000; }
+  .ep-tipo    { font-size: 7pt; font-weight: 900; color: #000; }
+
+  .ep-produto {
+    font-size: 15pt; font-weight: 900; line-height: 1.1;
+    text-transform: uppercase; letter-spacing: .01em;
+    flex-shrink: 0; margin-bottom: 0.8mm;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .ep-lote-bloco {
+    display: flex; align-items: center; gap: 3mm;
+    margin-bottom: 1.5mm; flex-shrink: 0;
+  }
+  .ep-lote-label { font-size: 6.5pt; font-weight: 900; color: #000; text-transform: uppercase; letter-spacing: .05em; }
+  .ep-lote-val {
+    background: #000; color: #fff;
+    font-size: 9pt; font-weight: 700; font-family: 'Courier New', monospace;
+    padding: 0.5mm 2mm; letter-spacing: .04em;
+  }
+
+  .ep-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    column-gap: 4mm; row-gap: 1mm;
+    flex: 1; min-height: 0; overflow: hidden;
+  }
+  .ep-campo { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+  .ep-lbl { font-size: 6pt; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; color: #000; line-height: 1; }
+  .ep-val { font-size: 9pt; font-weight: 900; color: #000; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ep-val.destaque { font-size: 10.5pt; font-weight: 900; }
+
+  .ep-footer {
+    border-top: 1pt solid #000; padding-top: 0.8mm; margin-top: 1mm;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-shrink: 0;
+  }
+  .ep-footer span { font-size: 7pt; color: #000; font-weight: 900; }
+}
 </style>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 
 <div class="card">
   <h1>IMAC — Servidor de Impressão</h1>
-  <div class="sub">Deixe esta janela aberta. O celular enviará as etiquetas via Nuvem (Firebase).</div>
+  <div class="sub">Deixe esta janela aberta. O celular enviará as etiquetas via Firebase.<br>
+    <strong style="color:#78350f">Para Chrome não abrir ao imprimir:</strong>
+    inicie o Chrome com <code>--kiosk-printing</code>
+    <em>ou</em> rode <code>node servidor-impressao-node.js</code> (modo ZPL — recomendado).
+  </div>
 
-  <div id="status-box" class="status warn">⏳ Conectando ao banco de dados do Firebase...</div>
+  <div id="status-box" class="status warn">⏳ Conectando ao Firebase...</div>
 
   <div class="status-box-fb">
     Firebase: <strong>etiquetas-84828</strong> &nbsp;·&nbsp;
     Conexão: <span id="fb-status" style="font-weight:bold;color:#f59e0b">Desconectado</span><br>
-    Modo de impressão: <span id="modo-label" class="modo-badge modo-html">HTML (iframe)</span>
-    <span id="modo-desc" style="font-size:11px;color:#6b7a99;margin-left:6px">Inicie servidor-impressao-node.js para ativar modo ZPL</span>
+    Modo de impressão: <span id="modo-label" class="modo-badge modo-html">window.print()</span>
+    <span id="modo-desc" style="font-size:11px;color:#6b7a99;margin-left:6px">Inicie servidor-impressao-node.js para ativar ZPL (Chrome não abre, nítido)</span>
   </div>
 
   <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:#6b7a99;text-transform:uppercase;letter-spacing:.05em">Log de impressões</div>
@@ -49,12 +130,15 @@ h1{font-size:18px;font-weight:700;margin-bottom:4px}
   </div>
 </div>
 
+<!-- Área de impressão: invisível na tela, usada pelo window.print() -->
+<div id="etiqueta-print"></div>
+
 <script>
-const logEl = document.getElementById('log');
+const logEl     = document.getElementById('log');
 const statusBox = document.getElementById('status-box');
 const fbStatusSpan = document.getElementById('fb-status');
 
-function addLog(msg, tipo='') {
+function addLog(msg, tipo = '') {
   const ts = new Date().toLocaleTimeString('pt-BR');
   logEl.innerHTML += `<span class="ts">[${ts}]</span> <span class="${tipo}">${msg}</span><br>`;
   logEl.scrollTop = logEl.scrollHeight;
@@ -63,14 +147,15 @@ function addLog(msg, tipo='') {
 // ── Modo ZPL via servidor Node.js local ──────────────────────────
 const PORTA_NODE = 35234;
 let modoZPL = false;
+let imprimindo = false;
 
 async function verificarModoZPL() {
   try {
-    const ctrl = new AbortController();
+    const ctrl  = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 1500);
-    const res = await fetch(`http://127.0.0.1:${PORTA_NODE}/status`, { signal: ctrl.signal });
+    const res   = await fetch(`http://127.0.0.1:${PORTA_NODE}/status`, { signal: ctrl.signal });
     clearTimeout(timer);
-    const json = await res.json();
+    const json  = await res.json();
     modoZPL = json.ok === true;
   } catch (_) {
     modoZPL = false;
@@ -78,19 +163,19 @@ async function verificarModoZPL() {
   const badge = document.getElementById('modo-label');
   const desc  = document.getElementById('modo-desc');
   if (modoZPL) {
-    badge.className = 'modo-badge modo-zpl';
+    badge.className   = 'modo-badge modo-zpl';
     badge.textContent = 'ZPL direto (Zebra)';
-    desc.textContent = 'Alta resolução · sem popup · sem página em branco';
+    desc.textContent  = 'Alta resolução · Chrome não abre · sem página em branco';
   } else {
-    badge.className = 'modo-badge modo-html';
-    badge.textContent = 'HTML (iframe)';
-    desc.textContent = 'Inicie servidor-impressao-node.js para ativar modo ZPL';
+    badge.className   = 'modo-badge modo-html';
+    badge.textContent = 'window.print()';
+    desc.textContent  = 'Inicie servidor-impressao-node.js para ativar ZPL (Chrome não abre, nítido)';
   }
   setTimeout(verificarModoZPL, 10000);
 }
 verificarModoZPL();
 
-// ── Configuração do Firebase da IMAC ─────────────────────────────
+// ── Firebase ─────────────────────────────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyCgniZ8fVNdmbzkyfOKGrfXjcKhvX-OIhI",
   authDomain: "etiquetas-84828.firebaseapp.com",
@@ -101,56 +186,57 @@ const firebaseConfig = {
   databaseURL: "https://etiquetas-84828-default-rtdb.firebaseio.com"
 };
 
-// Inicializa conexão com o banco de dados
 try {
   firebase.initializeApp(firebaseConfig);
   const database = firebase.database();
-  
+
   database.ref('.info/connected').on('value', (snap) => {
     if (snap.val() === true) {
-      fbStatusSpan.textContent = "Conectado com Sucesso";
-      fbStatusSpan.style.color = "#43c59e";
-      statusBox.className = 'status ok';
-      statusBox.textContent = '✓ Servidor ativo — Aguardando comandos do celular';
-      addLog('Conectado ao Firebase Realtime Database.', 'ok');
+      fbStatusSpan.textContent = 'Conectado';
+      fbStatusSpan.style.color = '#43c59e';
+      statusBox.className      = 'status ok';
+      statusBox.textContent    = '✓ Servidor ativo — Aguardando comandos do celular';
+      addLog('Conectado ao Firebase.', 'ok');
     } else {
-      fbStatusSpan.textContent = "Desconectado";
-      fbStatusSpan.style.color = "#ef5350";
-      statusBox.className = 'status err';
-      statusBox.textContent = '❌ Desconectado do Firebase.';
+      fbStatusSpan.textContent = 'Desconectado';
+      fbStatusSpan.style.color = '#ef5350';
+      statusBox.className      = 'status err';
+      statusBox.textContent    = '❌ Desconectado do Firebase.';
     }
   });
 
-  // Ouvinte da fila de impressão
   database.ref('imac-fila-impressao').on('child_added', (snapshot) => {
-    const job = snapshot.val();
+    const job   = snapshot.val();
     const jobId = snapshot.key;
     if (!job) return;
-
-    // Transaction: garante que somente UMA instância do servidor processa cada job,
-    // eliminando etiquetas duplicadas quando há mais de uma aba aberta.
     database.ref('imac-fila-impressao/' + jobId).transaction(
-      (current) => (current === null ? undefined : null),
-      (error, committed) => {
-        if (!error && committed) processarJob(job);
-      }
+      (cur) => (cur === null ? undefined : null),
+      (err, committed) => { if (!err && committed) processarJob(job); }
     );
   });
 
-} catch (error) {
-  addLog('Erro ao inicializar Firebase: ' + error.message, 'err');
+} catch (e) {
+  addLog('Erro Firebase: ' + e.message, 'err');
 }
 
 function processarJob(dados) {
-  addLog('Recebido da nuvem: ' + (dados.produto || 'Item') + ' — ' + (dados.loteImac || ''), 'ok');
+  addLog('Recebido: ' + (dados.produto || 'Item') + ' — ' + (dados.loteImac || ''), 'ok');
   imprimirEtiqueta(dados);
 }
 
+// ── Impressão ─────────────────────────────────────────────────────
+function fmtD(s) {
+  if (!s) return '—';
+  if (s.includes('/')) return s;
+  const [y, m, d] = s.split('-');
+  return d + '/' + m + '/' + y;
+}
+
 async function imprimirEtiqueta(d) {
+  // ── Modo ZPL: envia para o servidor Node.js — Chrome não abre ──
   if (modoZPL) {
-    // ── Modo ZPL: envia para o servidor Node.js local ─────────
     try {
-      const res = await fetch(`http://127.0.0.1:${PORTA_NODE}/imprimir`, {
+      const res  = await fetch(`http://127.0.0.1:${PORTA_NODE}/imprimir`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(d)
@@ -161,184 +247,55 @@ async function imprimirEtiqueta(d) {
       } else {
         addLog('Erro ZPL: ' + (json.erro || 'desconhecido'), 'err');
       }
-    } catch(e) {
-      addLog('ZPL indisponível (' + e.message + ') — usando iframe', 'warn');
+    } catch (e) {
+      addLog('ZPL falhou (' + e.message + ') — usando window.print()', 'warn');
       modoZPL = false;
-      imprimirViaIframe(d);
+      imprimirWindowPrint(d);
     }
     return;
   }
-  imprimirViaIframe(d);
+
+  // ── Fallback: window.print() na própria página (@media print) ──
+  // Com --kiosk-printing o Chrome NÃO abre diálogo nem vem para frente.
+  imprimirWindowPrint(d);
 }
 
-function imprimirViaIframe(d) {
-  // 90×50mm — sem QR code — fontes grandes e nítidas
+function imprimirWindowPrint(d) {
+  if (imprimindo) return;
+  imprimindo = true;
+
   const dataHoje = new Date().toLocaleDateString('pt-BR');
+  const alvo     = document.getElementById('etiqueta-print');
 
-  // Gera data de entrada em BR se vier em ISO
-  function fmtD(s) {
-    if (!s) return '—';
-    if (s.includes('/')) return s;
-    const [y,m,dia] = s.split('-');
-    return dia + '/' + m + '/' + y;
-  }
-
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
-<style>
-/* ── Página: 90×50mm sem margem ── */
-@page {
-  size: 90mm 50mm;
-  margin: 0;
-}
-
-/* ── Reset total ── */
-*, *::before, *::after {
-  margin: 0; padding: 0; box-sizing: border-box;
-}
-
-/* ── Trava: exatamente 1 página ── */
-html {
-  width: 90mm !important; height: 50mm !important;
-  max-width: 90mm !important; max-height: 50mm !important;
-  overflow: hidden !important;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
-}
-
-body {
-  font-family: Arial, Helvetica, sans-serif;
-  width: 90mm !important; height: 50mm !important;
-  max-width: 90mm !important; max-height: 50mm !important;
-  overflow: hidden !important;
-  background: #fff; color: #000;
-  display: flex; flex-direction: column;
-  padding: 1.2mm 2mm 1.2mm 2mm;
-  page-break-after: avoid !important;
-  break-after: avoid !important;
-}
-
-/* ── Cabeçalho ── */
-.header {
-  display: flex; justify-content: space-between; align-items: center;
-  border-bottom: 1.5pt solid #000; padding-bottom: 0.8mm; margin-bottom: 1.2mm;
-  flex-shrink: 0;
-}
-.empresa { font-size: 7pt; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; color: #000; }
-.tipo    { font-size: 7pt; font-weight: 900; color: #000; }
-
-/* ── Nome do produto ── */
-.produto {
-  font-size: 15pt; font-weight: 900; line-height: 1.1;
-  text-transform: uppercase; letter-spacing: .01em;
-  flex-shrink: 0; margin-bottom: 0.8mm;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-
-/* ── Lote IMAC em destaque ── */
-.lote-bloco {
-  display: flex; align-items: center; gap: 3mm;
-  margin-bottom: 1.5mm; flex-shrink: 0;
-}
-.lote-label { font-size: 6.5pt; font-weight: 900; color: #000; text-transform: uppercase; letter-spacing: .05em; }
-.lote-val {
-  background: #000; color: #fff;
-  font-size: 9pt; font-weight: 700; font-family: 'Courier New', monospace;
-  padding: 0.5mm 2mm; letter-spacing: .04em;
-}
-
-/* ── Grade de campos (2 colunas) ── */
-.grid {
-  display: grid; grid-template-columns: 1fr 1fr;
-  column-gap: 4mm; row-gap: 1mm;
-  flex: 1; min-height: 0; overflow: hidden;
-}
-.campo { display: flex; flex-direction: column; min-width: 0; }
-.campo-lbl {
-  font-size: 6pt; font-weight: 900; text-transform: uppercase;
-  letter-spacing: .04em; color: #000; line-height: 1;
-}
-.campo-val {
-  font-size: 9pt; font-weight: 900; color: #000; line-height: 1.2;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.campo-val.destaque { font-size: 10.5pt; font-weight: 900; }
-
-/* ── Rodapé ── */
-.footer {
-  border-top: 1pt solid #000; padding-top: 0.8mm; margin-top: 1mm;
-  display: flex; justify-content: space-between; align-items: center;
-  flex-shrink: 0;
-}
-.footer span { font-size: 7pt; color: #000; font-weight: 900; }
-</style>
-</head>
-<body>
-
-<div class="header">
-  <span class="empresa">IMAC — Controle de Estoque</span>
-  <span class="tipo">Rastreabilidade de Insumos</span>
-</div>
-
-<div class="produto">${d.produto || '—'}</div>
-
-<div class="lote-bloco">
-  <span class="lote-label">Lote IMAC</span>
-  <span class="lote-val">${d.loteImac || '—'}</span>
-</div>
-
-<div class="grid">
-  <div class="campo">
-    <div class="campo-lbl">Lote Fornecedor</div>
-    <div class="campo-val">${d.loteForn || '—'}</div>
-  </div>
-  <div class="campo">
-    <div class="campo-lbl">Nota Fiscal</div>
-    <div class="campo-val">${d.nf || '—'}</div>
-  </div>
-  <div class="campo">
-    <div class="campo-lbl">Fornecedor</div>
-    <div class="campo-val">${(d.fornecedor || '—').slice(0,22)}</div>
-  </div>
-  <div class="campo">
-    <div class="campo-lbl">Validade</div>
-    <div class="campo-val destaque">${d.validade || '—'}</div>
-  </div>
-  <div class="campo">
-    <div class="campo-lbl">Quantidade</div>
-    <div class="campo-val">${d.quantidade || '—'}</div>
-  </div>
-  <div class="campo">
-    <div class="campo-lbl">Endereço / Local</div>
-    <div class="campo-val">${d.endereco || '—'}</div>
-  </div>
-</div>
-
-<div class="footer">
-  <span>${d.responsavel ? 'Op: ' + d.responsavel + '  ·  ' : ''}IMAC · Rastreabilidade</span>
-  <span>Entrada: ${fmtD(d.dataRec)}  ·  Impresso: ${dataHoje}</span>
-</div>
-
-</body></html>`;
-
-  // Impressão via iframe oculto — sem popup, sem diálogo (compatível com --kiosk-printing)
-  const old = document.getElementById('frame-impressao');
-  if (old) old.remove();
-
-  const iframe = document.createElement('iframe');
-  iframe.id = 'frame-impressao';
-  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:90mm;height:50mm;border:none';
-  document.body.appendChild(iframe);
-
-  const iDoc = iframe.contentWindow.document;
-  iDoc.open();
-  iDoc.write(html);
-  iDoc.close();
+  alvo.innerHTML = `
+    <div class="ep-header">
+      <span class="ep-empresa">IMAC — Controle de Estoque</span>
+      <span class="ep-tipo">Rastreabilidade de Insumos</span>
+    </div>
+    <div class="ep-produto">${d.produto || '—'}</div>
+    <div class="ep-lote-bloco">
+      <span class="ep-lote-label">Lote IMAC</span>
+      <span class="ep-lote-val">${d.loteImac || '—'}</span>
+    </div>
+    <div class="ep-grid">
+      <div class="ep-campo"><div class="ep-lbl">Lote Fornecedor</div><div class="ep-val">${d.loteForn || '—'}</div></div>
+      <div class="ep-campo"><div class="ep-lbl">Nota Fiscal</div><div class="ep-val">${d.nf || '—'}</div></div>
+      <div class="ep-campo"><div class="ep-lbl">Fornecedor</div><div class="ep-val">${(d.fornecedor || '—').slice(0, 22)}</div></div>
+      <div class="ep-campo"><div class="ep-lbl">Validade</div><div class="ep-val destaque">${d.validade || '—'}</div></div>
+      <div class="ep-campo"><div class="ep-lbl">Quantidade</div><div class="ep-val">${d.quantidade || '—'}</div></div>
+      <div class="ep-campo"><div class="ep-lbl">Endereço / Local</div><div class="ep-val">${d.endereco || '—'}</div></div>
+    </div>
+    <div class="ep-footer">
+      <span>${d.responsavel ? 'Op: ' + d.responsavel + '  ·  ' : ''}IMAC · Rastreabilidade</span>
+      <span>Entrada: ${fmtD(d.dataRec)}  ·  Impresso: ${dataHoje}</span>
+    </div>`;
 
   setTimeout(() => {
-    iframe.contentWindow.print();
-    addLog('Etiqueta enviada para impressão.', 'ok');
-    setTimeout(() => { if (iframe.parentNode) iframe.remove(); }, 8000);
-  }, 400);
+    window.print();
+    addLog('Impresso: ' + (d.produto || ''), 'ok');
+    alvo.innerHTML = '';
+    imprimindo = false;
+  }, 150);
 }
 </script>
 </body>
