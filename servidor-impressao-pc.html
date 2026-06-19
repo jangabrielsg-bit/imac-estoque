@@ -29,20 +29,20 @@ h1{font-size:18px;font-weight:700;margin-bottom:4px}
 @page { size: 90mm 50mm; margin: 0; }
 
 @media print {
-  /* 100vw/100vh em print CSS = dimensão física da página (não depende de cadeia height:100%) */
+  /* html/body SEM altura fixa: o documento mede exatamente o que o
+     #etiqueta-print medir (50mm) → Chrome gera exatamente 1 página.
+     Forçar height:100% ou 100vh no html/body faz o Chrome calcular
+     múltiplas páginas com base no tamanho da tela, não da etiqueta. */
   html, body {
-    width: 100vw !important; height: 100vh !important;
-    overflow: hidden !important; margin: 0 !important; padding: 0 !important;
-    background: #fff !important;
+    margin: 0 !important; padding: 0 !important; background: #fff !important;
   }
   .card { display: none !important; }
 
-  /* Grid com 4 linhas explícitas: cabeçalho | produto | dados(1fr) | rodapé
-     O rodapé nunca é espremido porque tem sua própria linha garantida */
   #etiqueta-print {
     display: grid !important;
     grid-template-rows: auto auto 1fr auto;
-    width: 100vw; height: 100vh;
+    width: 90mm;
+    height: 50mm;
     overflow: hidden;
     box-sizing: border-box;
     font-family: Arial, Helvetica, sans-serif; color: #000;
