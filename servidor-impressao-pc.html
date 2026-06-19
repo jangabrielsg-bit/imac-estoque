@@ -265,37 +265,62 @@ function imprimirWindowPrint(d) {
   imprimindo = true;
 
   const dataHoje = new Date().toLocaleDateString('pt-BR');
-  const alvo     = document.getElementById('etiqueta-print');
 
-  alvo.innerHTML = `
-    <div class="ep-header">
-      <span class="ep-empresa">IMAC — Controle de Estoque</span>
-      <span class="ep-tipo">Rastreabilidade de Insumos</span>
+  const estilos = `
+    *{box-sizing:border-box;margin:0;padding:0}
+    @page{size:90mm 50mm;margin:0}
+    html,body{width:90mm;height:50mm;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-family:Arial,Helvetica,sans-serif;color:#000}
+    #ep{display:flex;flex-direction:column;width:90mm;height:50mm;max-width:90mm;max-height:50mm;overflow:hidden;padding:1.2mm 2mm}
+    .ep-header{display:flex;justify-content:space-between;align-items:center;border-bottom:1.5pt solid #000;padding-bottom:0.8mm;margin-bottom:1.2mm;flex-shrink:0}
+    .ep-empresa{font-size:7pt;font-weight:900;text-transform:uppercase;letter-spacing:.06em}
+    .ep-tipo{font-size:7pt;font-weight:900}
+    .ep-produto{font-size:15pt;font-weight:900;line-height:1.1;text-transform:uppercase;letter-spacing:.01em;flex-shrink:0;margin-bottom:0.8mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ep-lote-bloco{display:flex;align-items:center;gap:3mm;margin-bottom:1.5mm;flex-shrink:0}
+    .ep-lote-val{background:#000;color:#fff;font-size:9pt;font-weight:700;font-family:'Courier New',monospace;padding:0.5mm 2mm;letter-spacing:.04em}
+    .ep-grid{display:grid;grid-template-columns:1fr 1fr;column-gap:4mm;row-gap:1mm;flex:1;min-height:0;overflow:hidden}
+    .ep-campo{display:flex;flex-direction:column;min-width:0;overflow:hidden}
+    .ep-lbl{font-size:6pt;font-weight:900;text-transform:uppercase;letter-spacing:.04em;line-height:1}
+    .ep-val{font-size:9pt;font-weight:900;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ep-val.destaque{font-size:10.5pt;font-weight:900}
+    .ep-footer{border-top:1pt solid #000;padding-top:0.8mm;margin-top:1mm;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+    .ep-footer span{font-size:7pt;font-weight:900}
+  `;
+
+  const corpo = `
+    <div id="ep">
+      <div class="ep-header">
+        <span class="ep-empresa">IMAC — Controle de Qualidade</span>
+        <span class="ep-tipo">Rastreabilidade de Insumos</span>
+      </div>
+      <div class="ep-produto">${d.produto || '—'}</div>
+      <div class="ep-lote-bloco">
+        <span class="ep-lote-val">${d.loteImac || '—'}</span>
+      </div>
+      <div class="ep-grid">
+        <div class="ep-campo"><div class="ep-lbl">Lote Fornecedor</div><div class="ep-val">${d.loteForn || '—'}</div></div>
+        <div class="ep-campo"><div class="ep-lbl">Nota Fiscal</div><div class="ep-val">${d.nf || '—'}</div></div>
+        <div class="ep-campo"><div class="ep-lbl">Fornecedor</div><div class="ep-val">${(d.fornecedor || '—').slice(0, 22)}</div></div>
+        <div class="ep-campo"><div class="ep-lbl">Validade</div><div class="ep-val destaque">${d.validade || '—'}</div></div>
+        <div class="ep-campo"><div class="ep-lbl">Quantidade</div><div class="ep-val">${d.quantidade || '—'}</div></div>
+        <div class="ep-campo"><div class="ep-lbl">Endereço / Local</div><div class="ep-val">${d.endereco || '—'}</div></div>
+      </div>
+      <div class="ep-footer">
+        <span>${d.responsavel ? 'Op: ' + d.responsavel + '  ·  ' : ''}IMAC · Rastreabilidade</span>
+        <span>Entrada: ${fmtD(d.dataRec)}  ·  Impresso: ${dataHoje}</span>
+      </div>
     </div>
-    <div class="ep-produto">${d.produto || '—'}</div>
-    <div class="ep-lote-bloco">
-      <span class="ep-lote-label">Lote IMAC</span>
-      <span class="ep-lote-val">${d.loteImac || '—'}</span>
-    </div>
-    <div class="ep-grid">
-      <div class="ep-campo"><div class="ep-lbl">Lote Fornecedor</div><div class="ep-val">${d.loteForn || '—'}</div></div>
-      <div class="ep-campo"><div class="ep-lbl">Nota Fiscal</div><div class="ep-val">${d.nf || '—'}</div></div>
-      <div class="ep-campo"><div class="ep-lbl">Fornecedor</div><div class="ep-val">${(d.fornecedor || '—').slice(0, 22)}</div></div>
-      <div class="ep-campo"><div class="ep-lbl">Validade</div><div class="ep-val destaque">${d.validade || '—'}</div></div>
-      <div class="ep-campo"><div class="ep-lbl">Quantidade</div><div class="ep-val">${d.quantidade || '—'}</div></div>
-      <div class="ep-campo"><div class="ep-lbl">Endereço / Local</div><div class="ep-val">${d.endereco || '—'}</div></div>
-    </div>
-    <div class="ep-footer">
-      <span>${d.responsavel ? 'Op: ' + d.responsavel + '  ·  ' : ''}IMAC · Rastreabilidade</span>
-      <span>Entrada: ${fmtD(d.dataRec)}  ·  Impresso: ${dataHoje}</span>
-    </div>`;
+  `;
+
+  const popup = window.open('', '_blank', 'width=1,height=1,left=-9999,top=-9999');
+  popup.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${estilos}</style></head><body>${corpo}</body></html>`);
+  popup.document.close();
 
   setTimeout(() => {
-    window.print();
+    popup.print();
+    popup.close();
     addLog('Impresso: ' + (d.produto || ''), 'ok');
-    alvo.innerHTML = '';
     imprimindo = false;
-  }, 150);
+  }, 200);
 }
 </script>
 </body>
