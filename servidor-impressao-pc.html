@@ -17,7 +17,11 @@ h1{font-size:18px;font-weight:700;margin-bottom:4px}
 .log .ts{color:#90a0b0}
 .log .ok{color:#43c59e;background:none;border:none;padding:0;font-weight:normal}
 .log .err{color:#ef5350;background:none;border:none;padding:0;font-weight:normal}
+.log .warn{color:#f59e0b;background:none;border:none;padding:0;font-weight:normal}
 .status-box-fb {background:#f8f9fc;border:1px solid #dde3ee;border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:12px;color:#1a1a2e}
+.modo-badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;margin-left:8px}
+.modo-zpl{background:#e3f8f1;color:#1a4a3a}
+.modo-html{background:#fff3cd;color:#856404}
 </style>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
@@ -33,8 +37,10 @@ h1{font-size:18px;font-weight:700;margin-bottom:4px}
   <div id="status-box" class="status warn">⏳ Conectando ao banco de dados do Firebase...</div>
 
   <div class="status-box-fb">
-    Projeto Firebase: <strong>etiquetas-84828</strong><br>
-    Status da Conexão: <span id="fb-status" style="font-weight:bold;color:#f59e0b">Desconectado</span>
+    Firebase: <strong>etiquetas-84828</strong> &nbsp;·&nbsp;
+    Conexão: <span id="fb-status" style="font-weight:bold;color:#f59e0b">Desconectado</span><br>
+    Modo de impressão: <span id="modo-label" class="modo-badge modo-html">HTML (iframe)</span>
+    <span id="modo-desc" style="font-size:11px;color:#6b7a99;margin-left:6px">Inicie servidor-impressao-node.js para ativar modo ZPL</span>
   </div>
 
   <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:#6b7a99;text-transform:uppercase;letter-spacing:.05em">Log de impressões</div>
@@ -44,15 +50,45 @@ h1{font-size:18px;font-weight:700;margin-bottom:4px}
 </div>
 
 <script>
-const log = document.getElementById('log');
+const logEl = document.getElementById('log');
 const statusBox = document.getElementById('status-box');
 const fbStatusSpan = document.getElementById('fb-status');
 
 function addLog(msg, tipo='') {
   const ts = new Date().toLocaleTimeString('pt-BR');
-  log.innerHTML += `<span class="ts">[${ts}]</span> <span class="${tipo}">${msg}</span><br>`;
-  log.scrollTop = log.scrollHeight;
+  logEl.innerHTML += `<span class="ts">[${ts}]</span> <span class="${tipo}">${msg}</span><br>`;
+  logEl.scrollTop = logEl.scrollHeight;
 }
+
+// ── Modo ZPL via servidor Node.js local ──────────────────────────
+const PORTA_NODE = 35234;
+let modoZPL = false;
+
+async function verificarModoZPL() {
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 1500);
+    const res = await fetch(`http://127.0.0.1:${PORTA_NODE}/status`, { signal: ctrl.signal });
+    clearTimeout(timer);
+    const json = await res.json();
+    modoZPL = json.ok === true;
+  } catch (_) {
+    modoZPL = false;
+  }
+  const badge = document.getElementById('modo-label');
+  const desc  = document.getElementById('modo-desc');
+  if (modoZPL) {
+    badge.className = 'modo-badge modo-zpl';
+    badge.textContent = 'ZPL direto (Zebra)';
+    desc.textContent = 'Alta resolução · sem popup · sem página em branco';
+  } else {
+    badge.className = 'modo-badge modo-html';
+    badge.textContent = 'HTML (iframe)';
+    desc.textContent = 'Inicie servidor-impressao-node.js para ativar modo ZPL';
+  }
+  setTimeout(verificarModoZPL, 10000);
+}
+verificarModoZPL();
 
 // ── Configuração do Firebase da IMAC ─────────────────────────────
 const firebaseConfig = {
@@ -110,7 +146,32 @@ function processarJob(dados) {
   imprimirEtiqueta(dados);
 }
 
-function imprimirEtiqueta(d) {
+async function imprimirEtiqueta(d) {
+  if (modoZPL) {
+    // ── Modo ZPL: envia para o servidor Node.js local ─────────
+    try {
+      const res = await fetch(`http://127.0.0.1:${PORTA_NODE}/imprimir`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(d)
+      });
+      const json = await res.json();
+      if (json.ok) {
+        addLog('Impresso ZPL: ' + (d.produto || ''), 'ok');
+      } else {
+        addLog('Erro ZPL: ' + (json.erro || 'desconhecido'), 'err');
+      }
+    } catch(e) {
+      addLog('ZPL indisponível (' + e.message + ') — usando iframe', 'warn');
+      modoZPL = false;
+      imprimirViaIframe(d);
+    }
+    return;
+  }
+  imprimirViaIframe(d);
+}
+
+function imprimirViaIframe(d) {
   // 90×50mm — sem QR code — fontes grandes e nítidas
   const dataHoje = new Date().toLocaleDateString('pt-BR');
 
@@ -130,35 +191,30 @@ function imprimirEtiqueta(d) {
   margin: 0;
 }
 
-/* ── Reset total + prevenção de segunda página ── */
+/* ── Reset total ── */
 *, *::before, *::after {
   margin: 0; padding: 0; box-sizing: border-box;
-  page-break-before: avoid !important;
-  page-break-after:  avoid !important;
-  page-break-inside: avoid !important;
-  break-before: avoid !important;
-  break-after:  avoid !important;
-  break-inside: avoid !important;
 }
 
+/* ── Trava: exatamente 1 página ── */
 html {
-  width: 90mm; height: 50mm;
-  max-width: 90mm; max-height: 50mm;
-  overflow: hidden;
+  width: 90mm !important; height: 50mm !important;
+  max-width: 90mm !important; max-height: 50mm !important;
+  overflow: hidden !important;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
 
 body {
   font-family: Arial, Helvetica, sans-serif;
-  width: 90mm; height: 50mm;
-  max-width: 90mm; max-height: 50mm;
-  overflow: hidden;
+  width: 90mm !important; height: 50mm !important;
+  max-width: 90mm !important; max-height: 50mm !important;
+  overflow: hidden !important;
   background: #fff; color: #000;
   display: flex; flex-direction: column;
   padding: 1.2mm 2mm 1.2mm 2mm;
-  page-break-after: avoid;
-  break-after: avoid;
+  page-break-after: avoid !important;
+  break-after: avoid !important;
 }
 
 /* ── Cabeçalho ── */
@@ -279,14 +335,9 @@ body {
   iDoc.close();
 
   setTimeout(() => {
-    iDoc.documentElement.style.width  = '90mm';
-    iDoc.documentElement.style.height = '50mm';
-    iDoc.body.style.width  = '90mm';
-    iDoc.body.style.height = '50mm';
-    iframe.contentWindow.focus();
     iframe.contentWindow.print();
     addLog('Etiqueta enviada para impressão.', 'ok');
-    setTimeout(() => { if (iframe.parentNode) iframe.remove(); }, 10000);
+    setTimeout(() => { if (iframe.parentNode) iframe.remove(); }, 8000);
   }, 400);
 }
 </script>
