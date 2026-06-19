@@ -26,13 +26,13 @@ h1{font-size:18px;font-weight:700;margin-bottom:4px}
 /* ── Etiqueta: oculta na tela, impressa pelo window.print() ── */
 #etiqueta-print { display: none; }
 
-@page { size: 90mm 50mm; margin: 0; }
+@page { size: 85mm 45mm; margin: 0; }
 
 @media print {
   /* Garante exatamente 1 página sem overflow */
   html, body {
-    width: 90mm !important; height: 50mm !important;
-    max-width: 90mm !important; max-height: 50mm !important;
+    width: 85mm !important; height: 45mm !important;
+    max-width: 85mm !important; max-height: 45mm !important;
     overflow: hidden !important; margin: 0 !important; padding: 0 !important;
     background: #fff !important;
   }
@@ -44,7 +44,7 @@ h1{font-size:18px;font-weight:700;margin-bottom:4px}
   #etiqueta-print {
     display: flex !important; flex-direction: column;
     position: absolute; top: 0; left: 0;
-    width: 90mm; height: 50mm;
+    width: 85mm; height: 45mm;
     overflow: hidden;
     font-family: Arial, Helvetica, sans-serif; color: #000;
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
